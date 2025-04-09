@@ -30,13 +30,13 @@ require (
     github.com/joho/godotenv v1.5.1 // optional, for .env support
 )
 ```
-Run go mod tidy to install them.
+Run `go mod tidy` to install them.
 
 ## Usage
 Here's a complete example to get you started:
 
 Example: Combined API
-Create a main.go file:
+Create a `main.go` file:
 ```go
 package main
 
@@ -103,7 +103,7 @@ func main() {
 ```
 
 ## Configuration
-Create a .env file for sensitive data:
+Create a `.env` file for sensitive data:
 ```text
 JWT_SECRET=your-secure-secret-key
 ```
@@ -111,7 +111,7 @@ JWT_SECRET=your-secure-secret-key
 ```go
 go run main.go
 ```
-Visit http://localhost:8080/api-docs to see the interactive documentation.
+Visit `http://localhost:8080/api-docs` to see the interactive documentation.
 
 ## API Documentation
 The package generates an HTML page with:
