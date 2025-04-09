@@ -328,7 +328,7 @@ func (an *ApiNote) generateHTML() string {
 							}
 							html.WriteString(`
                 <details class="method-group">
-                    <summary><span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span> <i>` + endpoint.Description + `</i>` + lockIcon + `</summary>
+                    <summary><span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span> <b>` + endpoint.Path + `</b> <i>` + endpoint.Description + `</i>` + lockIcon + `</summary>
                     <div>`)
 
 							if len(endpoint.Parameters) > 0 {
@@ -384,13 +384,17 @@ func (an *ApiNote) generateHTML() string {
                     </div>
                     <div class="api-test">
                         <h4>Test API</h4>
-                        <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)">
+                        <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
                             <input type="hidden" name="method" value="` + endpoint.Method + `">`)
 
+							hasFormData := false
 							for _, param := range endpoint.Parameters {
 								inputType := "text"
 								if param.Type == "number" {
 									inputType = "number"
+								} else if param.Type == "formData" {
+									inputType = "file"
+									hasFormData = true
 								}
 								requiredAttr := ""
 								if param.Required {
@@ -406,9 +410,11 @@ func (an *ApiNote) generateHTML() string {
 							}
 
 							if endpoint.Method == "POST" || endpoint.Method == "PUT" {
-								html.WriteString(`
-                            <label>Request Body:</label>
+								if !hasFormData {
+									html.WriteString(`
+                            <label>Request Body (JSON):</label>
                             <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
+								}
 							}
 
 							html.WriteString(`
@@ -453,6 +459,8 @@ func (an *ApiNote) generateHTML() string {
             const params = {};
             const queryParams = new URLSearchParams();
             const formData = new FormData(form);
+            let hasFormData = false;
+
             formData.forEach((value, key) => {
                 if (key !== 'method' && key !== 'requestBody') {
                     const input = form.querySelector('input[name="' + key + '"]');
@@ -464,6 +472,9 @@ func (an *ApiNote) generateHTML() string {
                     } else if (paramIn === 'header' && value) {
                         params[key] = value;
                     }
+                    if (input.type === 'file' && value) {
+                        hasFormData = true;
+                    }
                 }
             });
 
@@ -472,9 +483,7 @@ func (an *ApiNote) generateHTML() string {
 
             const options = {
                 method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {},
             };
 
             if (authToken) {
@@ -485,13 +494,18 @@ func (an *ApiNote) generateHTML() string {
                 if (params[key]) options.headers[key] = params[key];
             });
 
-            const requestBody = formData.get('requestBody');
-            if (requestBody && (method === 'POST' || method === 'PUT')) {
-                try {
-                    options.body = requestBody;
-                } catch (e) {
-                    resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
-                    return;
+            if (hasFormData) {
+                options.body = formData;
+            } else {
+                const requestBody = formData.get('requestBody');
+                if (requestBody && (method === 'POST' || method === 'PUT')) {
+                    try {
+                        options.headers['Content-Type'] = 'application/json';
+                        options.body = requestBody;
+                    } catch (e) {
+                        resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
+                        return;
+                    }
                 }
             }
 
