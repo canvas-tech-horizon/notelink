@@ -45,7 +45,7 @@ import (
     "os"
     "github.com/gofiber/fiber/v2"
     "github.com/joho/godotenv"
-    "github.com/yourusername/notelink"
+    "github.com/canvas-tech-horizon/notelink"
 )
 
 type UserResponse struct {
