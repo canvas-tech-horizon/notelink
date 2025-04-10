@@ -559,7 +559,22 @@ func (an *ApiNote) generateHTML() string {
             fetch(url, options)
                 .then(response => {
                     const contentType = response.headers.get('content-type') || '';
-                    if (contentType.includes('application/json')) {
+                    const disposition = response.headers.get('content-disposition') || '';
+                    let filename = 'download';
+                    if (disposition) {
+                        const matches = disposition.match(/filename="([^"]+)"/);
+                        if (matches && matches[1]) filename = matches[1];
+                    }
+
+                    if (!response.ok) {
+                        return response.text().then(text => ({
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: text,
+                            contentType: contentType,
+                            isError: true
+                        }));
+                    } else if (contentType.includes('application/json')) {
                         return response.json().then(data => ({
                             status: response.status,
                             statusText: response.statusText,
@@ -572,33 +587,30 @@ func (an *ApiNote) generateHTML() string {
                             statusText: response.statusText,
                             body: blob,
                             contentType: contentType,
-                            isImage: true
+                            isImage: true,
+                            filename: filename
                         }));
-                    } else if (contentType.includes('application/octet-stream') || contentType === '') {
+                    } else {
                         return response.blob().then(blob => ({
                             status: response.status,
                             statusText: response.statusText,
                             body: blob,
                             contentType: contentType,
-                            isBlob: true
-                        }));
-                    } else {
-                        return response.text().then(text => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: text,
-                            contentType: contentType
+                            isBlob: true,
+                            filename: filename
                         }));
                     }
                 })
                 .then(result => {
                     resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
-                    if (result.isImage) {
+                    if (result.isError) {
+                        resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + result.body + '</pre>';
+                    } else if (result.isImage) {
                         const imgUrl = URL.createObjectURL(result.body);
                         resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
                     } else if (result.isBlob) {
                         const blobUrl = URL.createObjectURL(result.body);
-                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="response.bin">Download Binary File</a>';
+                        resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + result.filename + '">' + result.filename + '</a>';
                     } else {
                         resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
                     }
