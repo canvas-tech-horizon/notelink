@@ -498,47 +498,6 @@ func (an *ApiNote) generateHTML() string {
             alert('Authorization token set: ' + (authToken ? authToken : 'None'));
         }
 
-        // Map common MIME types to file extensions
-        const mimeToExt = {
-            'application/pdf': '.pdf',
-            'application/octet-stream': '.bin',
-            'application/zip': '.zip',
-            'application/json': '.json',
-            'application/msword': '.doc',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
-            'application/vnd.ms-excel': '.xls',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
-            'application/vnd.ms-powerpoint': '.ppt',
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
-            'text/plain': '.txt',
-            'text/csv': '.csv',
-            'text/html': '.html',
-            'image/jpeg': '.jpg',
-            'image/png': '.png',
-            'image/gif': '.gif',
-            'image/bmp': '.bmp',
-            'image/webp': '.webp',
-            'audio/mpeg': '.mp3',
-            'audio/wav': '.wav',
-            'video/mp4': '.mp4',
-            'video/x-msvideo': '.avi',
-            'video/x-matroska': '.mkv'
-        };
-
-        function getFileExtension(contentType, contentDisposition) {
-            // Try Content-Disposition first
-            if (contentDisposition) {
-                const filenameMatch = contentDisposition.match(/filename=["']?([^"']+)["']?/i);
-                if (filenameMatch && filenameMatch[1]) {
-                    const filename = filenameMatch[1];
-                    const ext = filename.slice(filename.lastIndexOf('.'));
-                    if (ext) return ext.toLowerCase();
-                }
-            }
-            // Fallback to Content-Type
-            return mimeToExt[contentType] || '.bin';
-        }
-
         function testApi(event, method, path, form) {
             event.preventDefault();
             const resultElement = document.getElementById('test-result-' + method + path.replace(/\//g, '-'));
@@ -600,7 +559,6 @@ func (an *ApiNote) generateHTML() string {
             fetch(url, options)
                 .then(response => {
                     const contentType = response.headers.get('content-type') || '';
-                    const contentDisposition = response.headers.get('content-disposition') || '';
                     if (contentType.includes('application/json')) {
                         return response.json().then(data => ({
                             status: response.status,
@@ -608,25 +566,39 @@ func (an *ApiNote) generateHTML() string {
                             body: JSON.stringify(data, null, 2),
                             contentType: contentType
                         }));
-                    } else {
-                        // Treat all non-JSON responses as blobs
+                    } else if (contentType.startsWith('image/')) {
                         return response.blob().then(blob => ({
                             status: response.status,
                             statusText: response.statusText,
                             body: blob,
                             contentType: contentType,
-                            contentDisposition: contentDisposition,
+                            isImage: true
+                        }));
+                    } else if (contentType.includes('application/octet-stream') || contentType === '') {
+                        return response.blob().then(blob => ({
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: blob,
+                            contentType: contentType,
                             isBlob: true
+                        }));
+                    } else {
+                        return response.text().then(text => ({
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: text,
+                            contentType: contentType
                         }));
                     }
                 })
                 .then(result => {
                     resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
-                    if (result.isBlob) {
+                    if (result.isImage) {
+                        const imgUrl = URL.createObjectURL(result.body);
+                        resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
+                    } else if (result.isBlob) {
                         const blobUrl = URL.createObjectURL(result.body);
-                        const ext = getFileExtension(result.contentType, result.contentDisposition);
-                        const filename = "response" + ext;
-                        resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + filename + '">Download ' + filename + '</a>';
+                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="response.bin">Download Binary File</a>';
                     } else {
                         resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
                     }
