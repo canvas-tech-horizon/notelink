@@ -125,6 +125,14 @@ func (an *ApiNote) DocumentedRoute(
 	}
 }
 
+// Fiber returns the underlying *fiber.App instance used by the ApiNote.
+//
+// This allows external packages or components to directly access and
+// configure the Fiber application (e.g., for adding routes, middleware, etc.).
+func (an *ApiNote) Fiber() *fiber.App {
+	return an.app
+}
+
 // Handler returns a Fiber handler that serves the API documentation as HTML.
 // The documentation is generated dynamically based on registered endpoints.
 //
