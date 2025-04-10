@@ -392,7 +392,7 @@ func (an *ApiNote) generateHTML() string {
 								inputType := "text"
 								if param.Type == "number" {
 									inputType = "number"
-								} else if param.Type == "formData" {
+								} else if param.Type == "file" {
 									inputType = "file"
 									hasFormData = true
 								}
@@ -478,7 +478,7 @@ func (an *ApiNote) generateHTML() string {
                 }
             });
 
-            const baseUrl = 'http://` + an.config.Host + `';
+            const baseUrl = 'http://` + an.config.Host + an.config.BasePath + `';
             const url = baseUrl + path + (queryParams.toString() ? '?' + queryParams.toString() : '');
 
             const options = {

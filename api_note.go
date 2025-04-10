@@ -94,7 +94,7 @@ func (an *ApiNote) DocumentedRoute(
 	key := method + " " + path
 	endpoint := Endpoint{
 		Method:       method,
-		Path:         path,
+		Path:         an.config.BasePath + path,
 		Description:  description,
 		Responses:    responses,
 		Parameters:   params,
