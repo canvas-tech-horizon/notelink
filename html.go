@@ -334,7 +334,7 @@ func (an *ApiNote) generateHTML() string {
 
 					// Render all methods under this path
 					for _, endpoint := range endpoints {
-						schemaBaseName := strings.Split(fullPath, "/")[len(strings.Split(fullPath, "/"))-2] // Second-to-last segment
+						schemaBaseName := strings.Split(fullPath, "/")[len(strings.Split(fullPath, "/"))-1] // Second-to-last segment
 						lockIcon := ""
 						if endpoint.AuthRequired {
 							lockIcon = `<i class="fas fa-lock lock-icon"></i>`
