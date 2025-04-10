@@ -228,8 +228,12 @@ func (an *ApiNote) generateHTML() string {
 	}
 	versionGroups := make(map[string]*SegmentNode)
 
+	allUnknown := true
 	for _, endpoint := range an.endpoints {
 		version := getVersion(endpoint.Path) // Priority 1
+		if version != "unknown" {
+			allUnknown = false
+		}
 		segments := strings.Split(strings.Trim(endpoint.Path, "/"), "/")
 		var versionIdx int
 		for i, seg := range segments {
@@ -262,6 +266,9 @@ func (an *ApiNote) generateHTML() string {
 			}
 			// Add endpoint at the deepest segment
 			current.Endpoints = append(current.Endpoints, endpoint)
+		} else {
+			// If no segments after version, add directly to the version node
+			current.Endpoints = append(current.Endpoints, endpoint)
 		}
 	}
 
@@ -281,6 +288,24 @@ func (an *ApiNote) generateHTML() string {
 		// Recursively render segments
 		var renderSegments func(node *SegmentNode, depth int)
 		renderSegments = func(node *SegmentNode, depth int) {
+
+			// If all versions are "unknown", skip version grouping
+			if allUnknown && len(versions) == 1 && versions[0] == "unknown" {
+				node := versionGroups["unknown"]
+				// Directly render segments without version grouping
+				renderSegments(node, 0) // Start at depth 0 since no version group
+			} else {
+				// Render with version grouping
+				for _, version := range versions {
+					node := versionGroups[version]
+					html.WriteString(`
+    <details class="version-group">
+        <summary>` + version + `</summary>`)
+					renderSegments(node, 1)
+					html.WriteString(`
+    </details>`)
+				}
+			}
 			// Sort children (segments)
 			var segmentNames []string
 			for name := range node.Children {
@@ -478,7 +503,7 @@ func (an *ApiNote) generateHTML() string {
                 }
             });
 
-            const baseUrl = 'http://` + an.config.Host + an.config.BasePath + `';
+            const baseUrl = 'http://` + an.config.Host + `';
             const url = baseUrl + path + (queryParams.toString() ? '?' + queryParams.toString() : '');
 
             const options = {
