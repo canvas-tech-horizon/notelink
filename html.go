@@ -525,16 +525,18 @@ func (an *ApiNote) generateHTML() string {
             'video/x-matroska': '.mkv'
         };
 
-        // Extract filename from Content-Disposition header
-        function getFilenameFromDisposition(disposition) {
-            if (!disposition) return null;
-            const matches = disposition.match(/filename=["']?([^"';]+)["']?/i);
-            return matches && matches[1] ? matches[1] : null;
-        }
-
-        // Infer extension from Content-Type or use default
-        function getExtensionFromMimeType(contentType) {
-            return mimeToExtension[contentType] || '.bin';
+        function getFileExtension(contentType, contentDisposition) {
+            // Try Content-Disposition first
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename=["']?([^"']+)["']?/i);
+                if (filenameMatch && filenameMatch[1]) {
+                    const filename = filenameMatch[1];
+                    const ext = filename.slice(filename.lastIndexOf('.'));
+                    if (ext) return ext.toLowerCase();
+                }
+            }
+            // Fallback to Content-Type
+            return mimeToExt[contentType] || '.bin';
         }
 
         function testApi(event, method, path, form) {
@@ -598,7 +600,7 @@ func (an *ApiNote) generateHTML() string {
             fetch(url, options)
                 .then(response => {
                     const contentType = response.headers.get('content-type') || '';
-                    const disposition = response.headers.get('content-disposition');
+                    const contentDisposition = response.headers.get('content-disposition') || '';
                     if (contentType.includes('application/json')) {
                         return response.json().then(data => ({
                             status: response.status,
@@ -606,45 +608,25 @@ func (an *ApiNote) generateHTML() string {
                             body: JSON.stringify(data, null, 2),
                             contentType: contentType
                         }));
-                    } else if (contentType.startsWith('image/')) {
-                        return response.blob().then(blob => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: blob,
-                            contentType: contentType,
-                            isImage: true
-                        }));
-                    } else if (contentType.includes('application/octet-stream') || contentType === '' || disposition) {
-                        return response.blob().then(blob => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: blob,
-                            contentType: contentType,
-                            disposition: disposition,
-                            isBlob: true
-                        }));
                     } else {
-                        return response.text().then(text => ({
+                        // Treat all non-JSON responses as blobs
+                        return response.blob().then(blob => ({
                             status: response.status,
                             statusText: response.statusText,
-                            body: text,
-                            contentType: contentType
+                            body: blob,
+                            contentType: contentType,
+                            contentDisposition: contentDisposition,
+                            isBlob: true
                         }));
                     }
                 })
                 .then(result => {
                     resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
-                    if (result.isImage) {
-                        const imgUrl = URL.createObjectURL(result.body);
-                        resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
-                    } else if (result.isBlob) {
+                    if (result.isBlob) {
                         const blobUrl = URL.createObjectURL(result.body);
-                        let filename = getFilenameFromDisposition(result.disposition);
-                        if (!filename) {
-                            const ext = getExtensionFromMimeType(result.contentType);
-                            filename = 'response' + ext;
-                        }
-                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="' + filename + '">Download ' + filename + '</a>';
+                        const ext = getFileExtension(result.contentType, result.contentDisposition);
+                        const filename = "response" + ext;
+                        resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + filename + '">Download ' + filename + '</a>';
                     } else {
                         resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
                     }
