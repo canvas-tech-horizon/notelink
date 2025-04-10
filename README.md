@@ -78,7 +78,7 @@ func main() {
 
 	api.DocumentedRoute(
 		"GET",
-		"/api/v1/users",
+		"/v1/users",
 		"List users",
 		map[string]string{
 			"200": "Success",
