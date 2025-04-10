@@ -541,23 +541,50 @@ func (an *ApiNote) generateHTML() string {
 
             fetch(url, options)
                 .then(response => {
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
+                    const contentType = response.headers.get('content-type') || '';
+                    if (contentType.includes('application/json')) {
                         return response.json().then(data => ({
                             status: response.status,
                             statusText: response.statusText,
-                            body: JSON.stringify(data, null, 2)
+                            body: JSON.stringify(data, null, 2),
+                            contentType: contentType
+                        }));
+                    } else if (contentType.startsWith('image/')) {
+                        return response.blob().then(blob => ({
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: blob,
+                            contentType: contentType,
+                            isImage: true
+                        }));
+                    } else if (contentType.includes('application/octet-stream') || contentType === '') {
+                        return response.blob().then(blob => ({
+                            status: response.status,
+                            statusText: response.statusText,
+                            body: blob,
+                            contentType: contentType,
+                            isBlob: true
                         }));
                     } else {
                         return response.text().then(text => ({
                             status: response.status,
                             statusText: response.statusText,
-                            body: text
+                            body: text,
+                            contentType: contentType
                         }));
                     }
                 })
                 .then(result => {
-                    resultElement.textContent = "Url: " + url + "\n" + "Status: " + result.status + " " + result.statusText + "\n\nResponse:\n" + result.body;
+                    resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
+                    if (result.isImage) {
+                        const imgUrl = URL.createObjectURL(result.body);
+                        resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
+                    } else if (result.isBlob) {
+                        const blobUrl = URL.createObjectURL(result.body);
+                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="response.bin">Download Binary File</a>';
+                    } else {
+                        resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
+                    }
                 })
                 .catch(error => {
                     resultElement.textContent = 'Error: ' + error.message;
