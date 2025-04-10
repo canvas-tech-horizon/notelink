@@ -51,7 +51,7 @@ func (an *ApiNote) generateHTML() string {
             box-sizing: border-box;
         }
 
-        .version-group {
+        .version-group, .top-segment-group {
             margin-bottom: 20px;
             padding: 10px 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -83,7 +83,7 @@ func (an *ApiNote) generateHTML() string {
             padding: 8px;
         }
 
-        .version-group > summary {
+        .version-group > summary, .top-segment-group > summary {
             font-size: 1.3em;
             font-weight: bold;
             color: #2c3e50;
@@ -220,22 +220,21 @@ func (an *ApiNote) generateHTML() string {
     </div>
     <h2>Endpoints</h2>`)
 
-	// Build a nested structure: version > top-level segment > sub-segments > full path > methods
+	// Build a nested structure: version (if exists) > top-level segment > sub-segments > full path > methods
 	type SegmentNode struct {
 		Name      string
 		Children  map[string]*SegmentNode
 		Endpoints []Endpoint
 	}
-	versionGroups := make(map[string]*SegmentNode)
 
-	allUnknown := true
+	// Separate endpoints into versioned and non-versioned
+	versionGroups := make(map[string]*SegmentNode)
+	nonVersionedRoot := &SegmentNode{Name: "", Children: make(map[string]*SegmentNode)}
+
 	for _, endpoint := range an.endpoints {
-		version := getVersion(endpoint.Path) // Priority 1
-		if version != "unknown" {
-			allUnknown = false
-		}
+		version := getVersion(endpoint.Path)
 		segments := strings.Split(strings.Trim(endpoint.Path, "/"), "/")
-		var versionIdx int
+		var versionIdx int = -1
 		for i, seg := range segments {
 			if strings.HasPrefix(seg, "v") && len(seg) > 1 {
 				versionIdx = i
@@ -243,36 +242,215 @@ func (an *ApiNote) generateHTML() string {
 			}
 		}
 
-		if versionGroups[version] == nil {
-			versionGroups[version] = &SegmentNode{Name: version, Children: make(map[string]*SegmentNode)}
-		}
-		current := versionGroups[version]
-
-		// First segment after version (Priority 2 top-level group)
-		if versionIdx+1 < len(segments) {
-			topSeg := segments[versionIdx+1]
-			if current.Children[topSeg] == nil {
-				current.Children[topSeg] = &SegmentNode{Name: topSeg, Children: make(map[string]*SegmentNode)}
+		if version != "unknown" {
+			// Versioned endpoint
+			if versionGroups[version] == nil {
+				versionGroups[version] = &SegmentNode{Name: version, Children: make(map[string]*SegmentNode)}
 			}
-			current = current.Children[topSeg]
+			current := versionGroups[version]
 
-			// Process deeper segments (nested Priority 2)
-			for i := versionIdx + 2; i < len(segments)-1; i++ {
-				seg := segments[i]
-				if current.Children[seg] == nil {
-					current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
+			// First segment after version
+			if versionIdx+1 < len(segments) {
+				topSeg := segments[versionIdx+1]
+				if current.Children[topSeg] == nil {
+					current.Children[topSeg] = &SegmentNode{Name: topSeg, Children: make(map[string]*SegmentNode)}
 				}
-				current = current.Children[seg]
+				current = current.Children[topSeg]
+
+				// Process deeper segments
+				for i := versionIdx + 2; i < len(segments)-1; i++ {
+					seg := segments[i]
+					if current.Children[seg] == nil {
+						current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
+					}
+					current = current.Children[seg]
+				}
+				// Add endpoint at the deepest segment
+				current.Endpoints = append(current.Endpoints, endpoint)
 			}
-			// Add endpoint at the deepest segment
-			current.Endpoints = append(current.Endpoints, endpoint)
 		} else {
-			// If no segments after version, add directly to the version node
-			current.Endpoints = append(current.Endpoints, endpoint)
+			// Non-versioned endpoint, group by first segment
+			if len(segments) > 0 {
+				topSeg := segments[0]
+				if nonVersionedRoot.Children[topSeg] == nil {
+					nonVersionedRoot.Children[topSeg] = &SegmentNode{Name: topSeg, Children: make(map[string]*SegmentNode)}
+				}
+				current := nonVersionedRoot.Children[topSeg]
+
+				// Process deeper segments
+				for i := 1; i < len(segments)-1; i++ {
+					seg := segments[i]
+					if current.Children[seg] == nil {
+						current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
+					}
+					current = current.Children[seg]
+				}
+				// Add endpoint at the deepest segment
+				current.Endpoints = append(current.Endpoints, endpoint)
+			}
 		}
 	}
 
-	// Sort versions (Priority 1)
+	// Render segments recursively
+	var renderSegments func(node *SegmentNode, depth int, groupClass string)
+	renderSegments = func(node *SegmentNode, depth int, groupClass string) {
+		// Sort children (segments)
+		var segmentNames []string
+		for name := range node.Children {
+			segmentNames = append(segmentNames, name)
+		}
+		sort.Strings(segmentNames)
+
+		for _, name := range segmentNames {
+			child := node.Children[name]
+			html.WriteString(`
+        <details class="` + groupClass + `">
+            <summary>` + name + `</summary>`)
+
+			// Group endpoints by full path
+			if len(child.Endpoints) > 0 {
+				// Deduplicate by path
+				pathGroups := make(map[string][]Endpoint)
+				for _, endpoint := range child.Endpoints {
+					fullPath := getFullPath(endpoint.Path)
+					pathGroups[fullPath] = append(pathGroups[fullPath], endpoint)
+				}
+
+				// Sort full paths
+				var fullPaths []string
+				for fullPath := range pathGroups {
+					fullPaths = append(fullPaths, fullPath)
+				}
+				sort.Strings(fullPaths)
+
+				for _, fullPath := range fullPaths {
+					endpoints := pathGroups[fullPath]
+					sort.Slice(endpoints, func(i, j int) bool {
+						return endpoints[i].Method < endpoints[j].Method
+					})
+					html.WriteString(`
+            <details class="path-group">
+                <summary>` + fullPath + ` (` + strconv.Itoa(len(endpoints)) + ` method` + pluralize(len(endpoints)) + `)</summary>`)
+
+					// Render all methods under this path
+					for _, endpoint := range endpoints {
+						schemaBaseName := strings.Split(fullPath, "/")[len(strings.Split(fullPath, "/"))-2] // Second-to-last segment
+						lockIcon := ""
+						if endpoint.AuthRequired {
+							lockIcon = `<i class="fas fa-lock lock-icon"></i>`
+						}
+						html.WriteString(`
+                <details class="method-group">
+                    <summary><span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span> <b>` + endpoint.Path + `</b> <i>` + endpoint.Description + `</i>` + lockIcon + `</summary>
+                    <div>`)
+
+						if len(endpoint.Parameters) > 0 {
+							html.WriteString(`
+                    <div class="parameters">
+                        <h4>Parameters:</h4>
+                        <ul>`)
+							for _, param := range endpoint.Parameters {
+								required := ""
+								if param.Required {
+									required = `<span class="required"> (required)</span>`
+								}
+								html.WriteString(`
+                        <li><strong>` + param.Name + `</strong> (` + param.In + `, ` + param.Type + `): ` + param.Description + required + `</li>`)
+							}
+							html.WriteString(`
+                        </ul>
+                    </div>`)
+						}
+
+						html.WriteString(`
+                    <div class="responses">
+                        <h4>Responses:</h4>`)
+
+						var codes []string
+						for code := range endpoint.Responses {
+							codes = append(codes, code)
+						}
+						sort.Strings(codes)
+
+						for _, code := range codes {
+							html.WriteString(`
+                        <p>` + code + `: ` + endpoint.Responses[code] + `</p>`)
+						}
+
+						html.WriteString(`
+                    </div>
+                    <div class="schemas">
+                        <h4>Schemas:</h4>`)
+
+						if reqTs := generateTypeScriptSchema(schemaBaseName+"Request", endpoint.RequestSchema); reqTs != "" {
+							html.WriteString(`
+                        <h5>Request Body:</h5>
+                        <pre>` + reqTs + `</pre>`)
+						}
+						if respTs := generateTypeScriptSchema(schemaBaseName+"Response", endpoint.ResponseSchema); respTs != "" {
+							html.WriteString(`
+                        <h5>Response Body:</h5>
+                        <pre>` + respTs + `</pre>`)
+						}
+
+						html.WriteString(`
+                    </div>
+                    <div class="api-test">
+                        <h4>Test API</h4>
+                        <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
+                            <input type="hidden" name="method" value="` + endpoint.Method + `">`)
+
+						hasFormData := false
+						for _, param := range endpoint.Parameters {
+							inputType := "text"
+							if param.Type == "number" {
+								inputType = "number"
+							} else if param.Type == "file" {
+								inputType = "file"
+								hasFormData = true
+							}
+							requiredAttr := ""
+							if param.Required {
+								requiredAttr = " required"
+							}
+							labelText := param.Name + ` (` + param.In + `)`
+							if param.Required {
+								labelText += ` <span class="required">* required</span>`
+							}
+							html.WriteString(`
+                            <label>` + labelText + `:</label>
+                            <input type="` + inputType + `" name="` + param.Name + `" placeholder="Enter ` + param.Name + `"` + requiredAttr + ` data-in="` + param.In + `">`)
+						}
+
+						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
+							if !hasFormData {
+								html.WriteString(`
+                            <label>Request Body (JSON):</label>
+                            <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
+							}
+						}
+
+						html.WriteString(`
+                            <button type="submit">Test Request</button>
+                            <pre id="test-result-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `"></pre>
+                        </form>
+                    </div>
+                </div>
+            </details>`)
+					}
+					html.WriteString(`
+            </details>`)
+				}
+			}
+
+			// Recurse into deeper segments
+			renderSegments(child, depth+1, "segment-group")
+			html.WriteString(`
+        </details>`)
+		}
+	}
+
+	// Render versioned groups
 	var versions []string
 	for version := range versionGroups {
 		versions = append(versions, version)
@@ -284,187 +462,14 @@ func (an *ApiNote) generateHTML() string {
 		html.WriteString(`
     <details class="version-group">
         <summary>` + version + `</summary>`)
-
-		// Recursively render segments
-		var renderSegments func(node *SegmentNode, depth int)
-		renderSegments = func(node *SegmentNode, depth int) {
-
-			// If all versions are "unknown", skip version grouping
-			if allUnknown && len(versions) == 1 && versions[0] == "unknown" {
-				node := versionGroups["unknown"]
-				// Directly render segments without version grouping
-				renderSegments(node, 0) // Start at depth 0 since no version group
-			} else {
-				// Render with version grouping
-				for _, version := range versions {
-					node := versionGroups[version]
-					html.WriteString(`
-    <details class="version-group">
-        <summary>` + version + `</summary>`)
-					renderSegments(node, 1)
-					html.WriteString(`
-    </details>`)
-				}
-			}
-			// Sort children (segments)
-			var segmentNames []string
-			for name := range node.Children {
-				segmentNames = append(segmentNames, name)
-			}
-			sort.Strings(segmentNames)
-
-			for _, name := range segmentNames {
-				child := node.Children[name]
-				html.WriteString(`
-        <details class="segment-group">
-            <summary>` + name + `</summary>`)
-
-				// Group endpoints by full path
-				if len(child.Endpoints) > 0 {
-					// Deduplicate by path
-					pathGroups := make(map[string][]Endpoint)
-					for _, endpoint := range child.Endpoints {
-						fullPath := getFullPath(endpoint.Path)
-						pathGroups[fullPath] = append(pathGroups[fullPath], endpoint)
-					}
-
-					// Sort full paths
-					var fullPaths []string
-					for fullPath := range pathGroups {
-						fullPaths = append(fullPaths, fullPath)
-					}
-					sort.Strings(fullPaths)
-
-					for _, fullPath := range fullPaths {
-						endpoints := pathGroups[fullPath]
-						sort.Slice(endpoints, func(i, j int) bool {
-							return endpoints[i].Method < endpoints[j].Method
-						})
-						html.WriteString(`
-            <details class="path-group">
-                <summary>` + fullPath + ` (` + strconv.Itoa(len(endpoints)) + ` method` + pluralize(len(endpoints)) + `)</summary>`)
-
-						// Render all methods under this path
-						for _, endpoint := range endpoints {
-							schemaBaseName := strings.Split(fullPath, "/")[len(strings.Split(fullPath, "/"))-2] // Second-to-last segment
-							lockIcon := ""
-							if endpoint.AuthRequired {
-								lockIcon = `<i class="fas fa-lock lock-icon"></i>`
-							}
-							html.WriteString(`
-                <details class="method-group">
-                    <summary><span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span> <b>` + endpoint.Path + `</b> <i>` + endpoint.Description + `</i>` + lockIcon + `</summary>
-                    <div>`)
-
-							if len(endpoint.Parameters) > 0 {
-								html.WriteString(`
-                    <div class="parameters">
-                        <h4>Parameters:</h4>
-                        <ul>`)
-								for _, param := range endpoint.Parameters {
-									required := ""
-									if param.Required {
-										required = `<span class="required"> (required)</span>`
-									}
-									html.WriteString(`
-                        <li><strong>` + param.Name + `</strong> (` + param.In + `, ` + param.Type + `): ` + param.Description + required + `</li>`)
-								}
-								html.WriteString(`
-                        </ul>
-                    </div>`)
-							}
-
-							html.WriteString(`
-                    <div class="responses">
-                        <h4>Responses:</h4>`)
-
-							var codes []string
-							for code := range endpoint.Responses {
-								codes = append(codes, code)
-							}
-							sort.Strings(codes)
-
-							for _, code := range codes {
-								html.WriteString(`
-                        <p>` + code + `: ` + endpoint.Responses[code] + `</p>`)
-							}
-
-							html.WriteString(`
-                    </div>
-                    <div class="schemas">
-                        <h4>Schemas:</h4>`)
-
-							if reqTs := generateTypeScriptSchema(schemaBaseName+"Request", endpoint.RequestSchema); reqTs != "" {
-								html.WriteString(`
-                        <h5>Request Body:</h5>
-                        <pre>` + reqTs + `</pre>`)
-							}
-							if respTs := generateTypeScriptSchema(schemaBaseName+"Response", endpoint.ResponseSchema); respTs != "" {
-								html.WriteString(`
-                        <h5>Response Body:</h5>
-                        <pre>` + respTs + `</pre>`)
-							}
-
-							html.WriteString(`
-                    </div>
-                    <div class="api-test">
-                        <h4>Test API</h4>
-                        <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
-                            <input type="hidden" name="method" value="` + endpoint.Method + `">`)
-
-							hasFormData := false
-							for _, param := range endpoint.Parameters {
-								inputType := "text"
-								if param.Type == "number" {
-									inputType = "number"
-								} else if param.Type == "file" {
-									inputType = "file"
-									hasFormData = true
-								}
-								requiredAttr := ""
-								if param.Required {
-									requiredAttr = " required"
-								}
-								labelText := param.Name + ` (` + param.In + `)`
-								if param.Required {
-									labelText += ` <span class="required">* required</span>`
-								}
-								html.WriteString(`
-                            <label>` + labelText + `:</label>
-                            <input type="` + inputType + `" name="` + param.Name + `" placeholder="Enter ` + param.Name + `"` + requiredAttr + ` data-in="` + param.In + `">`)
-							}
-
-							if endpoint.Method == "POST" || endpoint.Method == "PUT" {
-								if !hasFormData {
-									html.WriteString(`
-                            <label>Request Body (JSON):</label>
-                            <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
-								}
-							}
-
-							html.WriteString(`
-                            <button type="submit">Test Request</button>
-                            <pre id="test-result-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `"></pre>
-                        </form>
-                    </div>
-                </div>
-            </details>`)
-						}
-						html.WriteString(`
-            </details>`)
-					}
-				}
-
-				// Recurse into deeper segments
-				renderSegments(child, depth+1)
-				html.WriteString(`
-        </details>`)
-			}
-		}
-
-		renderSegments(node, 1)
+		renderSegments(node, 1, "segment-group")
 		html.WriteString(`
     </details>`)
+	}
+
+	// Render non-versioned groups (directly under top-level segments)
+	if len(nonVersionedRoot.Children) > 0 {
+		renderSegments(nonVersionedRoot, 0, "top-segment-group")
 	}
 
 	html.WriteString(`

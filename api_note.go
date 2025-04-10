@@ -113,15 +113,15 @@ func (an *ApiNote) DocumentedRoute(
 	handlers := append(an.middlewares, handler)
 	switch method {
 	case "GET":
-		an.app.Get(path, handlers...)
+		an.app.Get(an.config.BasePath+path, handlers...)
 	case "POST":
-		an.app.Post(path, handlers...)
+		an.app.Post(an.config.BasePath+path, handlers...)
 	case "PUT":
-		an.app.Put(path, handlers...)
+		an.app.Put(an.config.BasePath+path, handlers...)
 	case "DELETE":
-		an.app.Delete(path, handlers...)
+		an.app.Delete(an.config.BasePath+path, handlers...)
 	case "PATCH":
-		an.app.Patch(path, handlers...)
+		an.app.Patch(an.config.BasePath+path, handlers...)
 	}
 }
 
