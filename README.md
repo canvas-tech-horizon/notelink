@@ -41,64 +41,65 @@ Create a `main.go` file:
 package main
 
 import (
-    "log"
-    "os"
-    "github.com/gofiber/fiber/v2"
-    "github.com/joho/godotenv"
-    "github.com/canvas-tech-horizon/notelink"
+	"log"
+	"os"
+
+	"github.com/canvas-tech-horizon/notelink"
+	"github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
 
 type UserResponse struct {
-    ID    int    `json:"id"`
-    Name  string `json:"name"`
-    Email string `json:"email"`
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 func main() {
-    // Load .env file
-    if err := godotenv.Load(); err != nil {
-        log.Println("No .env file found")
-    }
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found")
+	}
 
-    jwtSecret := os.Getenv("JWT_SECRET")
-    if jwtSecret == "" {
-        jwtSecret = "my-secret-key"
-    }
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "my-secret-key"
+	}
 
-    config := notelink.Config{
-        Title:       "Sample API",
-        Description: "A sample API with documentation",
-        Version:     "1.0.0",
-        Host:        "localhost:8080",
-        BasePath:    "/api",
-    }
+	config := notelink.Config{
+		Title:       "Sample API",
+		Description: "A sample API with documentation",
+		Version:     "1.0.0",
+		Host:        "localhost:8080",
+		BasePath:    "/api",
+	}
 
-    api := notelink.NewApiNote(&config, jwtSecret)
+	api := notelink.NewApiNote(&config, jwtSecret)
 
-    api.DocumentedRoute(
-        "GET",
-        "/api/v1/users",
-        "List users",
-        map[string]string{
-            "200": "Success",
-            "401": "Unauthorized",
-        },
-        func(c *fiber.Ctx) error {
-            users := []UserResponse{
-                {ID: 1, Name: "John", Email: "john@example.com"},
-            }
-            return c.JSON(users)
-        },
-        []notelink.Parameter{
-            {Name: "limit", In: "query", Type: "number", Description: "Max users", Required: false},
-        },
-        nil,
-        []UserResponse{},
-    )
+	api.DocumentedRoute(
+		"GET",
+		"/api/v1/users",
+		"List users",
+		map[string]string{
+			"200": "Success",
+			"401": "Unauthorized",
+		},
+		func(c *fiber.Ctx) error {
+			users := []UserResponse{
+				{ID: 1, Name: "John", Email: "john@example.com"},
+			}
+			return c.JSON(users)
+		},
+		[]notelink.Parameter{
+			{Name: "limit", In: "query", Type: "number", Description: "Max users", Required: false},
+		},
+		nil,
+		[]UserResponse{},
+	)
 
-    if err := api.Listen(); err != nil {
-        panic(err)
-    }
+	if err := api.Listen(); err != nil {
+		panic(err)
+	}
 }
 ```
 
