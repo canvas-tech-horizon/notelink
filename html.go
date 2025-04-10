@@ -476,9 +476,65 @@ func (an *ApiNote) generateHTML() string {
     <script>
         let authToken = '` + an.config.AuthToken + `';
 
+        if (!authToken) {
+            const storedToken = localStorage.getItem('authToken');
+            if (storedToken) {
+                authToken = storedToken;
+            }
+        }
+
+        // Set the input field value on page load
+        window.onload = function() {
+            const authInput = document.getElementById('auth-token');
+            if (authInput) {
+                authInput.value = authToken;
+            }
+        };
+
         function setAuthToken() {
-            authToken = document.getElementById('auth-token').value;
+            const authInput = document.getElementById('auth-token');
+            authToken = authInput.value;
+            localStorage.setItem('authToken', authToken); // Save to localStorage
             alert('Authorization token set: ' + (authToken ? authToken : 'None'));
+        }
+
+        // Map common MIME types to file extensions
+        const mimeToExt = {
+            'application/pdf': '.pdf',
+            'application/octet-stream': '.bin',
+            'application/zip': '.zip',
+            'application/json': '.json',
+            'application/msword': '.doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+            'application/vnd.ms-excel': '.xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+            'application/vnd.ms-powerpoint': '.ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+            'text/plain': '.txt',
+            'text/csv': '.csv',
+            'text/html': '.html',
+            'image/jpeg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/bmp': '.bmp',
+            'image/webp': '.webp',
+            'audio/mpeg': '.mp3',
+            'audio/wav': '.wav',
+            'video/mp4': '.mp4',
+            'video/x-msvideo': '.avi',
+            'video/x-matroska': '.mkv'
+        };
+
+        // Extract filename from Content-Disposition header
+        function getFilenameFromDisposition(disposition) {
+            if (!disposition) return null;
+            const matches = disposition.match(/filename=["']?([^"';]+)["']?/i);
+            return matches && matches[1] ? matches[1] : null;
+        }
+
+        // Infer extension from Content-Type or use default
+        function getExtensionFromMimeType(contentType) {
+            return mimeToExtension[contentType] || '.bin';
         }
 
         function testApi(event, method, path, form) {
@@ -542,6 +598,7 @@ func (an *ApiNote) generateHTML() string {
             fetch(url, options)
                 .then(response => {
                     const contentType = response.headers.get('content-type') || '';
+                    const disposition = response.headers.get('content-disposition');
                     if (contentType.includes('application/json')) {
                         return response.json().then(data => ({
                             status: response.status,
@@ -557,12 +614,13 @@ func (an *ApiNote) generateHTML() string {
                             contentType: contentType,
                             isImage: true
                         }));
-                    } else if (contentType.includes('application/octet-stream') || contentType === '') {
+                    } else if (contentType.includes('application/octet-stream') || contentType === '' || disposition) {
                         return response.blob().then(blob => ({
                             status: response.status,
                             statusText: response.statusText,
                             body: blob,
                             contentType: contentType,
+                            disposition: disposition,
                             isBlob: true
                         }));
                     } else {
@@ -581,7 +639,12 @@ func (an *ApiNote) generateHTML() string {
                         resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
                     } else if (result.isBlob) {
                         const blobUrl = URL.createObjectURL(result.body);
-                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="response.bin">Download Binary File</a>';
+                        let filename = getFilenameFromDisposition(result.disposition);
+                        if (!filename) {
+                            const ext = getExtensionFromMimeType(result.contentType);
+                            filename = 'response' + ext;
+                        }
+                        resultElement.innerHTML += '<strong>Response (Binary File):</strong><br><a href="' + blobUrl + '" download="' + filename + '">Download ' + filename + '</a>';
                     } else {
                         resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
                     }
