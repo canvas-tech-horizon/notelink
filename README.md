@@ -6,6 +6,8 @@
 
 Notelink is a Go package that simplifies API documentation generation and integrates it with a Fiber web server. It allows developers to define API endpoints with parameters, schemas, and authentication, and automatically generates an interactive HTML documentation page.
 
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fcanvas-tech-horizon%2Fnotelink.svg?type=large&issueType=license)](https://app.fossa.com/projects/git%2Bgithub.com%2Fcanvas-tech-horizon%2Fnotelink?ref=badge_large&issueType=license)
+
 ## Features
 
 - **Endpoint Documentation**: Define HTTP methods, paths, descriptions, and responses.
