@@ -16,6 +16,8 @@ Notelink is a Go package that simplifies API documentation generation and integr
 - **JWT Authentication**: Built-in middleware for token validation.
 - **Interactive Testing**: Test endpoints directly from the generated HTML docs.
 
+![image](https://github.com/user-attachments/assets/6d044c06-b0a6-4081-99f6-c213d452ed2e)
+
 ## Installation
 
 To use Notelink, ensure you have Go installed, then add it to your project:
@@ -35,7 +37,6 @@ require (
 Run `go mod tidy` to install them.
 
 ## Usage
-![image](https://github.com/user-attachments/assets/6d044c06-b0a6-4081-99f6-c213d452ed2e)
 
 Here's a complete example to get you started:
 
