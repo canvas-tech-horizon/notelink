@@ -35,6 +35,8 @@ require (
 Run `go mod tidy` to install them.
 
 ## Usage
+![image](https://github.com/user-attachments/assets/6d044c06-b0a6-4081-99f6-c213d452ed2e)
+
 Here's a complete example to get you started:
 
 Example: Combined API
