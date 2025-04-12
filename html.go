@@ -397,7 +397,7 @@ func (an *ApiNote) generateHTML() string {
                     </div>
                     <div class="api-test">
                         <h4>Test API</h4>
-                        <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
+                        <form id="test-form-` + endpoint.Method + "-" + strings.ReplaceAll(strings.ReplaceAll(endpoint.Path, "/", "-"), ":", "_") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
                             <input type="hidden" name="method" value="` + endpoint.Method + `">`)
 
 						// hasFormData := false
@@ -499,7 +499,7 @@ func (an *ApiNote) generateHTML() string {
 
             function testApi(event, method, path, form) {
                 event.preventDefault();
-                const resultElementId = 'test-result-' + method + '-' + path.replace(/\//g, '-').replace(/:/g, '_');
+                const resultElement = document.getElementById('test-result-' + method + path.replace(/\//g, '-'));
                 resultElement.textContent = 'Sending request...';
 
                 const params = {};
