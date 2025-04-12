@@ -509,6 +509,7 @@ func (an *ApiNote) generateHTML() string {
 
                 // Process form inputs
                 const inputs = form.querySelectorAll('input, textarea');
+                let modifiedPath = path; // Start with the original path
                 inputs.forEach(input => {
                     const key = input.name;
                     const value = input.value;
@@ -522,8 +523,9 @@ func (an *ApiNote) generateHTML() string {
                             } else if (value) {
                                 formData.append(key, value);
                             }
-                        } else if (paramIn === 'path') {
-                            path = path.replace(':' + key, encodeURIComponent(value));
+                        } else if (paramIn === 'path' && value) {
+                            // Replace :key with the value in the path
+                            modifiedPath = modifiedPath.replace(':' + key, encodeURIComponent(value));
                         } else if (paramIn === 'query' && value) {
                             queryParams.append(key, value);
                         } else if (paramIn === 'header' && value) {
@@ -532,8 +534,8 @@ func (an *ApiNote) generateHTML() string {
                     }
                 });
 
-                const baseUrl = 'http://` + an.config.Host + `';
-                const url = baseUrl + path + (queryParams.toString() ? '?' + queryParams.toString() : '');
+                const baseUrl = 'http://' + '` + an.config.Host + `';
+                const url = baseUrl + modifiedPath + (queryParams.toString() ? '?' + queryParams.toString() : '');
 
                 const options = {
                     method: method,
