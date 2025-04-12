@@ -400,14 +400,14 @@ func (an *ApiNote) generateHTML() string {
                         <form id="test-form-` + endpoint.Method + strings.ReplaceAll(endpoint.Path, "/", "-") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
                             <input type="hidden" name="method" value="` + endpoint.Method + `">`)
 
-						hasFormData := false
+						// hasFormData := false
 						for _, param := range endpoint.Parameters {
 							inputType := "text"
 							if param.Type == "number" {
 								inputType = "number"
 							} else if param.Type == "file" {
 								inputType = "file"
-								hasFormData = true
+								// hasFormData = true
 							}
 							requiredAttr := ""
 							if param.Required {
@@ -423,7 +423,7 @@ func (an *ApiNote) generateHTML() string {
 						}
 
 						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
-							if !hasFormData {
+							if len(endpoint.Parameters) == 0 {
 								html.WriteString(`
                             <label>Request Body (JSON):</label>
                             <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
@@ -473,153 +473,177 @@ func (an *ApiNote) generateHTML() string {
 	}
 
 	html.WriteString(`
-    <script>
-        let authToken = '` + an.config.AuthToken + `';
+        <script>
+            let authToken = '` + an.config.AuthToken + `';
 
-        if (!authToken) {
-            const storedToken = localStorage.getItem('authToken');
-            if (storedToken) {
-                authToken = storedToken;
-            }
-        }
-
-        // Set the input field value on page load
-        window.onload = function() {
-            const authInput = document.getElementById('auth-token');
-            if (authInput) {
-                authInput.value = authToken;
-            }
-        };
-
-        function setAuthToken() {
-            const authInput = document.getElementById('auth-token');
-            authToken = authInput.value;
-            localStorage.setItem('authToken', authToken); // Save to localStorage
-            alert('Authorization token set: ' + (authToken ? authToken : 'None'));
-        }
-
-        function testApi(event, method, path, form) {
-            event.preventDefault();
-            const resultElement = document.getElementById('test-result-' + method + path.replace(/\//g, '-'));
-            resultElement.textContent = 'Sending request...';
-
-            const params = {};
-            const queryParams = new URLSearchParams();
-            const formData = new FormData(form);
-            let hasFormData = false;
-
-            formData.forEach((value, key) => {
-                if (key !== 'method' && key !== 'requestBody') {
-                    const input = form.querySelector('input[name="' + key + '"]');
-                    const paramIn = input.getAttribute('data-in');
-                    if (paramIn === 'path') {
-                        path = path.replace(':' + key, value);
-                    } else if (paramIn === 'query' && value) {
-                        queryParams.append(key, value);
-                    } else if (paramIn === 'header' && value) {
-                        params[key] = value;
-                    }
-                    if (input.type === 'file' && value) {
-                        hasFormData = true;
-                    }
+            if (!authToken) {
+                const storedToken = localStorage.getItem('authToken');
+                if (storedToken) {
+                    authToken = storedToken;
                 }
-            });
+            }
 
-            const baseUrl = 'http://` + an.config.Host + `';
-            const url = baseUrl + path + (queryParams.toString() ? '?' + queryParams.toString() : '');
-
-            const options = {
-                method: method,
-                headers: {},
+            window.onload = function() {
+                const authInput = document.getElementById('auth-token');
+                if (authInput) {
+                    authInput.value = authToken;
+                }
             };
 
-            if (authToken) {
-                options.headers['Authorization'] = authToken;
+            function setAuthToken() {
+                const authInput = document.getElementById('auth-token');
+                authToken = authInput.value.trim();
+                localStorage.setItem('authToken', authToken);
+                alert('Authorization token set: ' + (authToken ? authToken : 'None'));
             }
 
-            Object.keys(params).forEach(key => {
-                if (params[key]) options.headers[key] = params[key];
-            });
+            function testApi(event, method, path, form) {
+                event.preventDefault();
+                const resultElement = document.getElementById('test-result-' + method + path.replace(/[\/:]/g, '-'));
+                resultElement.textContent = 'Sending request...';
 
-            if (hasFormData) {
-                options.body = formData;
-            } else {
-                const requestBody = formData.get('requestBody');
-                if (requestBody && (method === 'POST' || method === 'PUT')) {
-                    try {
-                        options.headers['Content-Type'] = 'application/json';
-                        options.body = requestBody;
-                    } catch (e) {
-                        resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
-                        return;
+                const params = {};
+                const queryParams = new URLSearchParams();
+                const formData = new FormData();
+                let isFormDataRequest = false;
+
+                // Process form inputs
+                const inputs = form.querySelectorAll('input, textarea');
+                inputs.forEach(input => {
+                    const key = input.name;
+                    const value = input.value;
+                    const paramIn = input.getAttribute('data-in');
+
+                    if (key && paramIn) {
+                        if (paramIn === 'formData') {
+                            isFormDataRequest = true;
+                            if (input.type === 'file' && input.files.length > 0) {
+                                formData.append(key, input.files[0]);
+                            } else if (value) {
+                                formData.append(key, value);
+                            }
+                        } else if (paramIn === 'path') {
+                            path = path.replace(':' + key, encodeURIComponent(value));
+                        } else if (paramIn === 'query' && value) {
+                            queryParams.append(key, value);
+                        } else if (paramIn === 'header' && value) {
+                            params[key] = value;
+                        }
+                    }
+                });
+
+                const baseUrl = 'http://` + an.config.Host + `';
+                const url = baseUrl + path + (queryParams.toString() ? '?' + queryParams.toString() : '');
+
+                const options = {
+                    method: method,
+                    headers: {},
+                };
+
+                if (authToken) {
+                    const token = authToken.startsWith('Bearer ') ? authToken : 'Bearer ' + authToken;
+                    options.headers['Authorization'] = token;
+                }
+
+                Object.keys(params).forEach(key => {
+                    if (params[key]) {
+                        options.headers[key] = params[key];
+                    }
+                });
+
+                if (isFormDataRequest) {
+                    options.body = formData;
+                } else if (method === 'POST' || method === 'PUT') {
+                    const requestBodyInput = form.querySelector('textarea[name="requestBody"]');
+                    if (requestBodyInput && requestBodyInput.value) {
+                        try {
+                            const jsonBody = JSON.parse(requestBodyInput.value);
+                            options.headers['Content-Type'] = 'application/json';
+                            options.body = JSON.stringify(jsonBody);
+                        } catch (e) {
+                            resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
+                            return;
+                        }
                     }
                 }
+
+                fetch(url, options)
+                    .then(response => {
+                        const contentType = response.headers.get('content-type') || '';
+                        const disposition = response.headers.get('content-disposition') || '';
+                        let filename = 'download';
+                        if (disposition) {
+                            const matches = disposition.match(/filename="([^"]+)"/);
+                            if (matches && matches[1]) {
+                                filename = matches[1];
+                            }
+                        }
+
+                        if (!response.ok) {
+                            return response.text().then(text => ({
+                                status: response.status,
+                                statusText: response.statusText,
+                                body: text,
+                                contentType: contentType,
+                                isError: true
+                            }));
+                        } else if (contentType.includes('application/json')) {
+                            return response.json().then(data => ({
+                                status: response.status,
+                                statusText: response.statusText,
+                                body: JSON.stringify(data, null, 2),
+                                contentType: contentType
+                            }));
+                        } else if (contentType.startsWith('image/')) {
+                            return response.blob().then(blob => ({
+                                status: response.status,
+                                statusText: response.statusText,
+                                body: blob,
+                                contentType: contentType,
+                                isImage: true,
+                                filename: filename
+                            }));
+                        } else {
+                            return response.blob().then(blob => ({
+                                status: response.status,
+                                statusText: response.statusText,
+                                body: blob,
+                                contentType: contentType,
+                                isBlob: true,
+                                filename: filename
+                            }));
+                        }
+                    })
+                    .then(result => {
+                        resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
+                        if (result.isError) {
+                            resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
+                        } else if (result.isImage) {
+                            const imgUrl = URL.createObjectURL(result.body);
+                            resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
+                        } else if (result.isBlob) {
+                            const blobUrl = URL.createObjectURL(result.body);
+                            resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + escapeHtml(result.filename) + '">' + escapeHtml(result.filename) + '</a>';
+                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                        } else {
+                            resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
+                        }
+                    })
+                    .catch(error => {
+                        resultElement.textContent = 'Error: ' + error.message;
+                    });
             }
 
-            fetch(url, options)
-                .then(response => {
-                    const contentType = response.headers.get('content-type') || '';
-                    const disposition = response.headers.get('content-disposition') || '';
-                    let filename = 'download';
-                    if (disposition) {
-                        const matches = disposition.match(/filename="([^"]+)"/);
-                        if (matches && matches[1]) filename = matches[1];
-                    }
-
-                    if (!response.ok) {
-                        return response.text().then(text => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: text,
-                            contentType: contentType,
-                            isError: true
-                        }));
-                    } else if (contentType.includes('application/json')) {
-                        return response.json().then(data => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: JSON.stringify(data, null, 2),
-                            contentType: contentType
-                        }));
-                    } else if (contentType.startsWith('image/')) {
-                        return response.blob().then(blob => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: blob,
-                            contentType: contentType,
-                            isImage: true,
-                            filename: filename
-                        }));
-                    } else {
-                        return response.blob().then(blob => ({
-                            status: response.status,
-                            statusText: response.statusText,
-                            body: blob,
-                            contentType: contentType,
-                            isBlob: true,
-                            filename: filename
-                        }));
-                    }
-                })
-                .then(result => {
-                    resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
-                    if (result.isError) {
-                        resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + result.body + '</pre>';
-                    } else if (result.isImage) {
-                        const imgUrl = URL.createObjectURL(result.body);
-                        resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
-                    } else if (result.isBlob) {
-                        const blobUrl = URL.createObjectURL(result.body);
-                        resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + result.filename + '">' + result.filename + '</a>';
-                    } else {
-                        resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + result.body + '</pre>';
-                    }
-                })
-                .catch(error => {
-                    resultElement.textContent = 'Error: ' + error.message;
-                });
-        }
-    </script>
+            function escapeHtml(unsafe) {
+                if (typeof unsafe !== 'string') return unsafe;
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+        </script>
     </div>
 </body>
 </html>`)

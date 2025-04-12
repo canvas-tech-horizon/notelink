@@ -23,6 +23,7 @@
 package notelink
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -72,57 +73,74 @@ func (an *ApiNote) Use(middleware ...fiber.Handler) {
 }
 
 // DocumentedRoute registers an API endpoint with its documentation and handler.
-// It adds the route to the Fiber app and stores the endpoint details for documentation.
+// It accepts a DocumentedRouteInput object containing the route details and
+// processes it to add the route to the Fiber app and store endpoint details for documentation.
 //
 // Parameters:
-//   - method: HTTP method (e.g., "GET", "POST")
-//   - path: Endpoint path (e.g., "/api/v1/users/:id")
-//   - description: Brief description of the endpoint
-//   - responses: Map of status codes to response descriptions
-//   - handler: Fiber handler function for the endpoint
-//   - params: List of parameters (query, path, or header)
-//   - schemas: Optional request and response schemas (first is request, second is response)
+//   - input: DocumentedRouteInput object containing method, path, description, responses,
+//     handler, params, schemasRequest, and schemasResponse
 //
-// The endpoint is marked as requiring authentication if any middleware is active.
-func (an *ApiNote) DocumentedRoute(
-	method, path, description string,
-	responses map[string]string,
-	handler fiber.Handler,
-	params []Parameter,
-	schemas ...interface{},
-) {
-	key := method + " " + path
+// Example usage:
+//
+//	api.DocumentedRoute(notelink.DocumentedRouteInput{
+//	    Method:      "POST",
+//	    Path:        "/v3/users",
+//	    Description: "Create a new user (Authenticated)",
+//	    Responses: map[string]string{
+//	        "201": "User created",
+//	        "400": "Invalid input",
+//	        "401": "Unauthorized",
+//	    },
+//	    Handler: handlerFunc,
+//	    Params:  []notelink.Parameter{},
+//	    SchemasRequest:  CreateUserRequest{},
+//	    SchemasResponse: UserResponse{},
+//	})
+func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
+	// Validate required fields
+	if input.Method == "" || input.Path == "" {
+		return fmt.Errorf("method and path are required")
+	}
+	if input.Handler == nil {
+		return fmt.Errorf("handler is required")
+	}
+
+	key := input.Method + " " + input.Path
 	endpoint := Endpoint{
-		Method:       method,
-		Path:         an.config.BasePath + path,
-		Description:  description,
-		Responses:    responses,
-		Parameters:   params,
+		Method:       input.Method,
+		Path:         an.config.BasePath + input.Path,
+		Description:  input.Description,
+		Responses:    input.Responses,
+		Parameters:   input.Params,
 		AuthRequired: len(an.middlewares) > 0,
 	}
 
-	if len(schemas) > 0 && schemas[0] != nil {
-		endpoint.RequestSchema = schemas[0]
+	if input.SchemasRequest != nil {
+		endpoint.RequestSchema = input.SchemasRequest
 	}
-	if len(schemas) > 1 && schemas[1] != nil {
-		endpoint.ResponseSchema = schemas[1]
+	if input.SchemasResponse != nil {
+		endpoint.ResponseSchema = input.SchemasResponse
 	}
 
 	an.endpoints[key] = endpoint
 
-	handlers := append(an.middlewares, handler)
-	switch method {
+	handlers := append(an.middlewares, input.Handler)
+	switch strings.ToUpper(input.Method) {
 	case "GET":
-		an.app.Get(an.config.BasePath+path, handlers...)
+		an.app.Get(an.config.BasePath+input.Path, handlers...)
 	case "POST":
-		an.app.Post(an.config.BasePath+path, handlers...)
+		an.app.Post(an.config.BasePath+input.Path, handlers...)
 	case "PUT":
-		an.app.Put(an.config.BasePath+path, handlers...)
+		an.app.Put(an.config.BasePath+input.Path, handlers...)
 	case "DELETE":
-		an.app.Delete(an.config.BasePath+path, handlers...)
+		an.app.Delete(an.config.BasePath+input.Path, handlers...)
 	case "PATCH":
-		an.app.Patch(an.config.BasePath+path, handlers...)
+		an.app.Patch(an.config.BasePath+input.Path, handlers...)
+	default:
+		return fmt.Errorf("unsupported HTTP method: %s", input.Method)
 	}
+
+	return nil
 }
 
 // Fiber returns the underlying *fiber.App instance used by the ApiNote.

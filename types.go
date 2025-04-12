@@ -1,5 +1,7 @@
 package notelink
 
+import "github.com/gofiber/fiber/v2"
+
 // Config holds the API documentation configuration
 type Config struct {
 	Title       string
@@ -29,4 +31,16 @@ type Endpoint struct {
 	ResponseSchema interface{}
 	Parameters     []Parameter
 	AuthRequired   bool // Indicates if authorization is required
+}
+
+// DocumentedRouteInput represents the input for registering a documented route
+type DocumentedRouteInput struct {
+	Method          string            `json:"method"`
+	Path            string            `json:"path"`
+	Description     string            `json:"description"`
+	Responses       map[string]string `json:"responses"`
+	Handler         fiber.Handler     `json:"handler"`
+	Params          []Parameter       `json:"params"`
+	SchemasRequest  interface{}       `json:"schemasRequest"`
+	SchemasResponse interface{}       `json:"schemasResponse"`
 }
