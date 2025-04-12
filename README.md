@@ -132,6 +132,3 @@ Collapsible Sections: Organized by API version and endpoint paths.
 This project is licensed under the MIT License - see the  file for details.
 
 This Markdown text will display cleanly on GitHub as your project's `README.md`. Copy this text into a file named `README.md` in your repository root, and it will serve as the landing page documentation for your project. Let me know if you need adjustments!
-###
-```
-
