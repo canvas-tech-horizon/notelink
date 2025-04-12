@@ -81,29 +81,43 @@ func main() {
 
 	api := notelink.NewApiNote(&config, jwtSecret)
 
-	api.DocumentedRoute(
-		"GET",
-		"/v1/users",
-		"List users",
-		map[string]string{
+	// Apply JWT middleware to require authentication for the endpoint
+	// api.Use(api.JWTMiddleware())
+
+	// Define the handler
+	handler := func(c *fiber.Ctx) error {
+		users := []UserResponse{
+			{ID: 1, Name: "John", Email: "john@example.com"},
+		}
+		return c.JSON(users)
+	}
+
+	// Register the route using DocumentedRouteInput
+	api.DocumentedRoute(notelink.DocumentedRouteInput{
+		Method:      "GET",
+		Path:        "/v1/users",
+		Description: "List users",
+		Responses: map[string]string{
 			"200": "Success",
 			"401": "Unauthorized",
 		},
-		func(c *fiber.Ctx) error {
-			users := []UserResponse{
-				{ID: 1, Name: "John", Email: "john@example.com"},
-			}
-			return c.JSON(users)
+		Handler: handler,
+		Params: []notelink.Parameter{
+			{
+				Name:        "limit",
+				In:          "query",
+				Type:        "number",
+				Description: "Max users",
+				Required:    false,
+			},
 		},
-		[]notelink.Parameter{
-			{Name: "limit", In: "query", Type: "number", Description: "Max users", Required: false},
-		},
-		nil,
-		[]UserResponse{},
-	)
+		SchemasRequest:  nil,              // No request body for GET
+		SchemasResponse: []UserResponse{}, // Response schema
+	})
 
+	// Start the server
 	if err := api.Listen(); err != nil {
-		panic(err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
 ```
