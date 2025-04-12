@@ -131,17 +131,6 @@ Collapsible Sections: Organized by API version and endpoint paths.
 ## License
 This project is licensed under the MIT License - see the  file for details.
 
-## Acknowledgments
-Built with Fiber for fast HTTP handling.
-Uses JWT for authentication.
-Inspired by the need for simple, integrated API documentation in Go.
-```text
-
-### Notes
-- **Repository Path**: Replace `github.com/canvas-tech-horizon/notelink` with your actual repository path.
-- **License**: Add a `LICENSE` file to your repo if you reference it (e.g., MIT License).
-- **Customization**: Adjust the example, features, or sections to match your specific implementation or preferences.
-
 This Markdown text will display cleanly on GitHub as your project's `README.md`. Copy this text into a file named `README.md` in your repository root, and it will serve as the landing page documentation for your project. Let me know if you need adjustments!
 ###
 ```
