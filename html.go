@@ -499,7 +499,7 @@ func (an *ApiNote) generateHTML() string {
 
             function testApi(event, method, path, form) {
                 event.preventDefault();
-                const resultElement = document.getElementById('test-result-' + method + path.replace(/[\/:]/g, '-'));
+                const resultElementId = 'test-result-' + method + '-' + path.replace(/\//g, '-').replace(/:/g, '_');
                 resultElement.textContent = 'Sending request...';
 
                 const params = {};
