@@ -423,11 +423,11 @@ func (an *ApiNote) generateHTML() string {
 						}
 
 						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
-							if len(endpoint.Parameters) == 0 {
+							// if len(endpoint.Parameters) == 0 {
 								html.WriteString(`
                             <label>Request Body (JSON):</label>
                             <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
-							}
+							// }
 						}
 
 						html.WriteString(`
