@@ -555,7 +555,7 @@ func (an *ApiNote) generateHTML() string {
 
                 if (isFormDataRequest) {
                     options.body = formData;
-                } else if (method === 'POST' || method === 'PUT') {
+                } else if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
                     const requestBodyInput = form.querySelector('textarea[name="requestBody"]');
                     if (requestBodyInput && requestBodyInput.value) {
                         try {
