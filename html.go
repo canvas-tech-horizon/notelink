@@ -414,62 +414,31 @@ func (an *ApiNote) generateHTML() string {
             min-width: 70px;
             justify-content: center;
             position: relative;
-            border: 2px solid transparent;
         }
 
         .method.GET {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-        }
-
-        .method.GET:hover {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
         }
 
         .method.POST {
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
-        }
-
-        .method.POST:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
         }
 
         .method.PUT {
             background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
-        }
-
-        .method.PUT:hover {
-            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
         }
 
         .method.DELETE {
             background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
-        }
-
-        .method.DELETE:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
 
         .method.PATCH {
             background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
             color: var(--white);
-            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
-        }
-
-        .method.PATCH:hover {
-            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
         }
 
         .endpoint-path {
@@ -480,7 +449,6 @@ func (an *ApiNote) generateHTML() string {
             background: var(--gray-100);
             padding: 0.375rem 0.75rem;
             border-radius: 0.5rem;
-            margin: 0 0.75rem;
             border: 1px solid var(--gray-200);
             transition: all 0.3s ease;
         }
@@ -581,6 +549,7 @@ func (an *ApiNote) generateHTML() string {
         .api-test textarea:focus {
             outline: none;
             border-color: var(--primary);
+            border-left-style: dashed;
             box-shadow: 0 0 0 4px rgb(99 102 241 / 0.1);
             transform: translateY(-2px);
             background: var(--white);
@@ -608,7 +577,6 @@ func (an *ApiNote) generateHTML() string {
             border-radius: var(--radius);
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
             font-size: 0.875rem;
@@ -622,7 +590,6 @@ func (an *ApiNote) generateHTML() string {
             width: 100%;
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
         }
 
         .api-test button:hover::before {
@@ -632,7 +599,6 @@ func (an *ApiNote) generateHTML() string {
         .api-test button:hover {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
             transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(99, 102, 241, 0.3);
         }
 
         .api-test button:active {
