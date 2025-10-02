@@ -1213,17 +1213,50 @@ func (an *ApiNote) generateHTML() string {
                             resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
                         } else if (result.isImage) {
                             const imgUrl = URL.createObjectURL(result.body);
-                            resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
+                            resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 10000)">';
+                            // Also provide download link for images
+                            resultElement.innerHTML += '<br><a href="' + imgUrl + '" download="' + escapeHtml(result.filename) + '">Download Image</a>';
+                            setTimeout(() => URL.revokeObjectURL(imgUrl), 30000); // Longer timeout for images
                         } else if (result.isBlob) {
                             const blobUrl = URL.createObjectURL(result.body);
-                            resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + escapeHtml(result.filename) + '">' + escapeHtml(result.filename) + '</a>';
-                            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                            const downloadId = 'download-link-' + Date.now();
+                            resultElement.innerHTML += '<strong>Response (File):</strong><br>';
+                            resultElement.innerHTML += '<div class="download-info">';
+                            resultElement.innerHTML += '<i class="fas fa-download"></i> ';
+                            resultElement.innerHTML += '<a href="' + blobUrl + '" download="' + escapeHtml(result.filename) + '" id="' + downloadId + '">' + escapeHtml(result.filename) + '</a>';
+                            resultElement.innerHTML += '<span style="margin-left: 10px; color: var(--info);">(' + (result.body.size ? (result.body.size / 1024).toFixed(1) + ' KB' : 'Unknown size') + ')</span>';
+                            resultElement.innerHTML += '</div>';
+                            
+                            // Automatically trigger download
+                            const downloadLink = document.getElementById(downloadId);
+                            if (downloadLink) {
+                                // Add click event to show download status
+                                downloadLink.addEventListener('click', function() {
+                                    const statusSpan = document.createElement('span');
+                                    statusSpan.style.marginLeft = '10px';
+                                    statusSpan.style.color = 'var(--success)';
+                                    statusSpan.innerHTML = '<i class="fas fa-check"></i> Download started';
+                                    this.parentNode.appendChild(statusSpan);
+                                });
+                                
+                                downloadLink.click();
+                                // Revoke object URL after download is triggered with a longer delay
+                                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+                            }
                         } else {
                             resultElement.innerHTML += '<strong>Response Body:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
                         }
                     })
                     .catch(error => {
-                        resultElement.textContent = 'Error: ' + error.message;
+                        console.error('Fetch error:', error);
+                        resultElement.innerHTML = '<strong>Error:</strong><br><pre style="color: var(--danger);">' + escapeHtml(error.message) + '</pre>';
+                        
+                        // Provide more detailed error information
+                        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                            resultElement.innerHTML += '<br><small>This might be a network connectivity issue or CORS error.</small>';
+                        } else if (error.name === 'AbortError') {
+                            resultElement.innerHTML += '<br><small>Request was aborted.</small>';
+                        }
                     });
             }
 
