@@ -27,198 +27,687 @@ func (an *ApiNote) generateHTML() string {
 	var html strings.Builder
 
 	html.WriteString(`<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <title>` + an.config.Title + `</title>
     <style>
-        body {
-            font-family: 'Source Code Pro', monospace;
-            margin: 20px;
-            background-color: #f9f9f9;
-            color: #333;
+        :root {
+            --primary: #e9902bff;
+            --primary-dark: #e59346ff;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+            --secondary: #e7a04eff;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
+            --radius: 0.75rem;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
 
-        h1, h2, h4 {
-            color: #2c3e50;
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 0 15px;
-            box-sizing: border-box;
+            padding: 1rem 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem 0;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin: 0 0 0.25rem 0;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin: 0 0 0.25rem 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .version-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: var(--white);
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        .auth-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-200);
+        }
+
+        .auth-section h2 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 0 0 0.75rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .auth-input-group {
+            display: flex;
+            gap: 0.75rem;
+            align-items: stretch;
+        }
+
+        .auth-section input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: var(--white);
+        }
+
+        .auth-section input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgb(99 102 241 / 0.1);
+        }
+
+        .auth-section button {
+            padding: 0.5rem 1rem;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+
+        .auth-section button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 0 0 1rem 0;
         }
 
         .version-group, .top-segment-group {
-            margin-bottom: 20px;
-            padding: 10px 15px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            background: transparent;
+            border: none;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .version-group:hover, .top-segment-group:hover {
+            border-bottom-color: var(--primary);
         }
 
         .segment-group {
-            margin-left: 20px;
-            margin-bottom: 10px;
+            margin: 0.25rem 0;
+            background: transparent;
+            border: none;
+            border-left: 3px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+
+        .segment-group:hover {
+            border-left-color: var(--primary);
         }
 
         .path-group {
-            margin-left: 40px;
-            margin-bottom: 10px;
+            margin: 0.25rem 0;
+            background: transparent;
+            border: none;
+            padding-left: 1rem;
+            transition: all 0.3s ease;
         }
 
         .method-group {
-            margin-left: 60px;
-            margin: 10px 0;
-            padding: 10px 15px;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            background-color: #fefefe;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-            box-sizing: border-box;
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .method-group:hover {
+            border-left-color: var(--primary);
+        }
+
+        /* Beautiful collapse animations */
+        details {
+            position: relative;
+        }
+
+        details > *:not(summary) {
+            animation: collapse-open 0.3s ease-out;
+            transform-origin: top;
+        }
+
+        @keyframes collapse-open {
+            0% {
+                opacity: 0;
+                transform: scaleY(0.8) translateY(-10px);
+            }
+            100% {
+                opacity: 1;
+                transform: scaleY(1) translateY(0);
+            }
         }
 
         summary {
             cursor: pointer;
-            padding: 8px;
+            padding: 0.75rem 1rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            list-style: none;
+            position: relative;
+            display: flex;
+            align-items: center;
+            user-select: none;
+            border-radius: inherit;
         }
 
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        /* Modern chevron design */
+        summary::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-right: 2px solid var(--gray-500);
+            border-bottom: 2px solid var(--gray-500);
+            transform: rotate(-45deg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+        }
+
+        details[open] > summary::before {
+            transform: rotate(45deg);
+            border-color: var(--primary);
+        }
+
+        summary:hover {
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+        }
+
+        summary:hover::before {
+            border-color: var(--primary);
+            transform: scale(1.1) rotate(-45deg);
+        }
+
+        details[open] > summary:hover::before {
+            transform: scale(1.1) rotate(45deg);
+        }
+
+        /* Enhanced styling for different levels */
         .version-group > summary, .top-segment-group > summary {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            background: transparent;
+            padding: 0.5rem 0;
+            border-bottom: none;
+        }
+
+        .version-group > summary::before, .top-segment-group > summary::before {
+            border-color: var(--primary);
+        }
+
+        .version-group > summary:hover, .top-segment-group > summary:hover {
+            background: var(--gray-50);
+            color: var(--primary-dark);
         }
 
         .segment-group > summary {
-            font-size: 1.2em;
+            font-size: 1rem;
             font-weight: 600;
-            color: #34495e;
+            color: var(--gray-800);
+            background: transparent;
+            padding: 0.5rem 0 0.5rem 1rem;
         }
 
-        .path-group > summary {
-            font-size: 1.1em;
-            font-weight: 500;
-            color: #555;
+        .segment-group > summary:hover {
+            background: var(--gray-50);
+            color: var(--primary);
+            border-radius: 0.5rem;
         }
 
         .method-group > summary {
-            font-size: 1em;
             font-weight: 500;
-            color: #555;
+            background: transparent;
+            padding: 0.5rem 0 0.5rem 1rem;
+        }
+
+        .method-group > summary:hover {
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+        }
+
+        .path-group > summary {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            background: transparent;
+            padding: 0.4rem 0 0.4rem 1rem;
+        }
+
+        .path-group > summary:hover {
+            background: var(--gray-50);
+            color: var(--info);
+            border-radius: 0.5rem;
+        }
+
+        /* Content styling with better spacing */
+        details[open] > summary + * {
+            background: transparent;
+            border-top: none;
+        }
+
+        .version-group[open] > summary + *,
+        .top-segment-group[open] > summary + * {
+            background: transparent;
+        }
+
+        .method-group[open] > summary + * {
+            padding: 1rem 0.75rem;
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Badge indicators for open/closed state */
+        summary::after {
+            position: absolute;
+            right: 1.5rem;
+            width: 6px;
+            height: 6px;
+            background: var(--gray-300);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        details[open] > summary::after {
+            background: var(--success);
+            transform: scale(1.3);
+        }
+
+        .segment-group > summary::after,
+        .path-group > summary::after {
+            display: none;
+        }
+
+        .version-group > summary::after,
+        .top-segment-group > summary::after {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        .version-group[open] > summary::after,
+        .top-segment-group[open] > summary::after {
+            background: var(--white);
         }
 
         .method {
-            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-right: 1rem;
+            min-width: 70px;
+            justify-content: center;
+            position: relative;
+            border: 2px solid transparent;
         }
 
-        .method.GET { color: #27ae60; }
-        .method.POST { color: #2980b9; }
-        .method.PUT { color: #f39c12; }
-        .method.DELETE { color: #e74c3c; }
-        .method.PATCH { color: #8e44ad; }
-
-        .path {
-            color: #888;
+        .method.GET {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
         }
 
-        .responses, .schemas, .parameters, .api-test {
-            margin-top: 10px;
-            margin-left: 20px;
+        .method.GET:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .method.POST {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+        }
+
+        .method.POST:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        .method.PUT {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+        }
+
+        .method.PUT:hover {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        .method.DELETE {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+        }
+
+        .method.DELETE:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        .method.PATCH {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: var(--white);
+            box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
+        }
+
+        .method.PATCH:hover {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+        }
+
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--gray-700);
+            font-weight: 500;
+            background: var(--gray-100);
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.5rem;
+            margin: 0 0.75rem;
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+
+        .method-group:hover .endpoint-path {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .endpoint-description {
+            color: var(--gray-500);
+            font-style: italic;
+            font-size: 0.875rem;
+            font-weight: 400;
+            margin-left: auto;
+            opacity: 0.8;
+            transition: all 0.3s ease;
+            padding-right: 28px;
+        }
+
+        .method-group:hover .endpoint-description {
+            color: var(--gray-700);
+            opacity: 1;
+        }
+
+        .responses, .schemas, .parameters {
+            margin: 0.75rem 0;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .api-test {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: var(--white);
+            border-radius: var(--radius);
+            border: 1px solid var(--gray-200);
+            box-shadow: var(--shadow-sm);
+        }
+
+        h4, h5 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin: 0 0 0.5rem 0;
+        }
+
+        h5 {
+            font-size: 0.85rem;
+            color: var(--gray-700);
         }
 
         pre {
-            background: #f4f4f4;
-            padding: 10px;
-            border-radius: 6px;
+            background: var(--gray-900);
+            color: var(--gray-100);
+            padding: 1rem;
+            border-radius: var(--radius);
             overflow-x: auto;
-            font-size: 0.9em;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            line-height: 1.5;
         }
 
         .required {
-            color: red;
+            color: var(--danger);
+            font-weight: 500;
+        }
+
+        .api-test h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary);
+        }
+
+        .api-test h4::before {
+            content: '🚀';
+            font-size: 1.2rem;
         }
 
         .api-test input,
         .api-test textarea {
             width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-            padding: 8px;
-            margin: 6px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            padding: 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius);
+            margin: 0.75rem 0;
+            font-family: inherit;
+            font-size: 0.875rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--white);
+            position: relative;
+        }
+
+        .api-test input:focus,
+        .api-test textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgb(99 102 241 / 0.1);
+            transform: translateY(-2px);
+            background: var(--white);
+        }
+
+        .api-test label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin: 1.5rem 0 0.5rem 0;
+            transition: color 0.3s ease;
+        }
+
+        .api-test input:focus + label,
+        .api-test textarea:focus + label {
+            color: var(--primary);
         }
 
         .api-test button {
-            background-color: #3498db;
-            color: white;
-            padding: 10px 15px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: var(--white);
+            padding: 0.6rem 1.9rem;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--radius);
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            font-size: 0.875rem;
+        }
+
+        .api-test button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .api-test button:hover::before {
+            left: 100%;
         }
 
         .api-test button:hover {
-            background-color: #2980b9;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary) 100%);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(99, 102, 241, 0.3);
         }
 
-        .auth-section {
-            margin-bottom: 20px;
-            padding: 10px 0;
-        }
-
-        .auth-section input {
-            width: 60%;
-            padding: 8px;
-            margin-right: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        .auth-section button {
-            padding: 8px 12px;
-            background-color: #2ecc71;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .auth-section button:hover {
-            background-color: #27ae60;
+        .api-test button:active {
+            transform: translateY(-1px);
         }
 
         .lock-icon {
-            color: rgb(235, 202, 20);
-            float: right;
-            font-size: 1em;
-            margin-left: 10px;
+            color: var(--warning);
+            font-size: 1rem;
+            background: rgba(245, 158, 11, 0.1);
+            padding: 0.50rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .method-group:hover .lock-icon {
+            background: var(--warning);
+            color: var(--white);
+            transform: scale(1.1);
         }
 
         ul {
-            padding-left: 20px;
+            margin: 0;
+            padding-left: 1.25rem;
         }
 
-        @media (max-width: 600px) {
-            .auth-section input {
-                width: 100%;
-                margin-bottom: 10px;
+        li {
+            margin: 0.5rem 0;
+            color: var(--gray-700);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .auth-input-group {
+                flex-direction: column;
+            }
+            
+            .method-group > summary {
+                padding-left: 2rem;
+            }
+            
+            .segment-group > summary {
+                padding-left: 1.5rem;
+            }
+            
+            .path-group > summary {
+                padding-left: 2rem;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-    <h1>` + an.config.Title + `</h1>
-    <p>` + an.config.Description + `</p>
-    <p>Version: ` + an.config.Version + `</p>
-    <div class="auth-section">
-        <h2>Authorize</h2>
-        <input type="text" id="auth-token" placeholder="Enter JWT Bearer Token (e.g., Bearer eyJ...)" value="` + an.config.AuthToken + `">
-        <button onclick="setAuthToken()">Set Token</button>
-    </div>
-    <h2>Endpoints</h2>`)
+        <div class="header">
+            <h1>` + an.config.Title + `</h1>
+            <p class="subtitle">` + an.config.Description + `</p>
+            <span class="version-badge">` + an.config.Version + `</span>
+        </div>
+        
+        <div class="auth-section">
+            <h2><i class="fas fa-key"></i> Authorize</h2>
+            <div class="auth-input-group">
+                <input type="text" id="auth-token" placeholder="Enter JWT Bearer Token (e.g., Bearer eyJ...)" value="` + an.config.AuthToken + `">
+                <button onclick="setAuthToken()">Set Token</button>
+            </div>
+        </div>
+        
+        <h2 class="section-title">API Endpoints</h2>`)
 
 	// Build a nested structure: version (if exists) > top-level segment > sub-segments > full path > methods
 	type SegmentNode struct {
@@ -304,8 +793,8 @@ func (an *ApiNote) generateHTML() string {
 		for _, name := range segmentNames {
 			child := node.Children[name]
 			html.WriteString(`
-        <details class="` + groupClass + `">
-            <summary>` + name + `</summary>`)
+    <details class="` + groupClass + `">
+        <summary>` + name + `</summary>`)
 
 			// Group endpoints by full path
 			if len(child.Endpoints) > 0 {
@@ -329,8 +818,8 @@ func (an *ApiNote) generateHTML() string {
 						return endpoints[i].Method < endpoints[j].Method
 					})
 					html.WriteString(`
-            <details class="path-group">
-                <summary>` + fullPath + ` (` + strconv.Itoa(len(endpoints)) + ` method` + pluralize(len(endpoints)) + `)</summary>`)
+        <details class="path-group">
+            <summary>` + fullPath + ` (` + strconv.Itoa(len(endpoints)) + ` method` + pluralize(len(endpoints)) + `)</summary>`)
 
 					// Render all methods under this path
 					for _, endpoint := range endpoints {
@@ -340,9 +829,13 @@ func (an *ApiNote) generateHTML() string {
 							lockIcon = `<i class="fas fa-lock lock-icon"></i>`
 						}
 						html.WriteString(`
-                <details class="method-group">
-                    <summary><span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span> <b>` + endpoint.Path + `</b> <i>` + endpoint.Description + `</i>` + lockIcon + `</summary>
-                    <div>`)
+            <details class="method-group">
+                <summary>
+                    <span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span>
+                    <span class="endpoint-path">` + endpoint.Path + `</span>
+                    <span class="endpoint-description">` + endpoint.Description + `</span>` + lockIcon + `
+                </summary>
+                <div>`)
 
 						if len(endpoint.Parameters) > 0 {
 							html.WriteString(`
@@ -355,7 +848,7 @@ func (an *ApiNote) generateHTML() string {
 									required = `<span class="required"> (required)</span>`
 								}
 								html.WriteString(`
-                        <li><strong>` + param.Name + `</strong> (` + param.In + `, ` + param.Type + `): ` + param.Description + required + `</li>`)
+                            <li><strong>` + param.Name + `</strong> (` + param.In + `, ` + param.Type + `): ` + param.Description + required + `</li>`)
 							}
 							html.WriteString(`
                         </ul>
@@ -424,7 +917,7 @@ func (an *ApiNote) generateHTML() string {
 
 						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
 							// if len(endpoint.Parameters) == 0 {
-								html.WriteString(`
+							html.WriteString(`
                             <label>Request Body (JSON):</label>
                             <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
 							// }
@@ -439,14 +932,14 @@ func (an *ApiNote) generateHTML() string {
             </details>`)
 					}
 					html.WriteString(`
-            </details>`)
+        </details>`)
 				}
 			}
 
 			// Recurse into deeper segments
 			renderSegments(child, depth+1, "segment-group")
 			html.WriteString(`
-        </details>`)
+    </details>`)
 		}
 	}
 
