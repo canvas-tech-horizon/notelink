@@ -975,26 +975,28 @@ func (an *ApiNote) generateHTML() string {
 								}
 							}
 
-							html.WriteString(`
-                            <label>Request Body (JSON):</label>
-                            <div class="json-editor-container" data-template="` + jsonTemplate + `">
-                                <div class="json-editor-toolbar">
-                                    <button type="button" class="json-editor-btn" onclick="formatJSON(this)">
-                                        <i class="fas fa-magic"></i> Format
-                                    </button>
-                                    <button type="button" class="json-editor-btn" onclick="validateJSON(this)">
-                                        <i class="fas fa-check-circle"></i> Validate
-                                    </button>
-                                    <button type="button" class="json-editor-btn" onclick="clearJSON(this)">
-                                        <i class="fas fa-trash"></i> Clear
-                                    </button>
-                                    <button type="button" class="json-editor-btn" onclick="loadSchemaTemplate(this)">
-                                        <i class="fas fa-file-code"></i> Load Template
-                                    </button>
-                                </div>
-                                <textarea name="requestBody" class="json-editor" placeholder="Enter JSON request body..."></textarea>
-                                <div class="json-validation-message" style="display: none;"></div>
-                            </div>`)
+							if endpoint.Parameters == nil {
+								html.WriteString(`
+                                <label>Request Body (JSON):</label>
+                                <div class="json-editor-container" data-template="` + jsonTemplate + `">
+                                    <div class="json-editor-toolbar">
+                                        <button type="button" class="json-editor-btn" onclick="formatJSON(this)">
+                                            <i class="fas fa-magic"></i> Format
+                                        </button>
+                                        <button type="button" class="json-editor-btn" onclick="validateJSON(this)">
+                                            <i class="fas fa-check-circle"></i> Validate
+                                        </button>
+                                        <button type="button" class="json-editor-btn" onclick="clearJSON(this)">
+                                            <i class="fas fa-trash"></i> Clear
+                                        </button>
+                                        <button type="button" class="json-editor-btn" onclick="loadSchemaTemplate(this)">
+                                            <i class="fas fa-file-code"></i> Load Template
+                                        </button>
+                                    </div>
+                                    <textarea name="requestBody" class="json-editor" placeholder="Enter JSON request body..."></textarea>
+                                    <div class="json-validation-message" style="display: none;"></div>
+                                </div>`)
+							}
 						}
 
 						html.WriteString(`
@@ -1208,7 +1210,7 @@ func (an *ApiNote) generateHTML() string {
                         resultElement.innerHTML += "<br>";
                         
                         if (result.isError) {
-                            resultElement.innerHTML += '<strong>Error Response Body:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
+                            resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
                         } else if (result.isImage) {
                             const imgUrl = URL.createObjectURL(result.body);
                             resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
@@ -1217,7 +1219,7 @@ func (an *ApiNote) generateHTML() string {
                             resultElement.innerHTML += '<strong>Response (File):</strong><br><a href="' + blobUrl + '" download="' + escapeHtml(result.filename) + '">' + escapeHtml(result.filename) + '</a>';
                             setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                         } else {
-                            resultElement.innerHTML += '<strong>Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
+                            resultElement.innerHTML += '<strong>Response Body:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
                         }
                     })
                     .catch(error => {
