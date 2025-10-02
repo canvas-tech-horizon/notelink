@@ -75,6 +75,28 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 
 		for _, iconPath := range iconPaths {
 			if _, err := os.Stat(iconPath); err == nil {
+				c.Set("Content-Type", "image/png")
+				c.Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
+				return c.SendFile(iconPath)
+			}
+		}
+
+		// If no icon found, return 404
+		return c.Status(fiber.StatusNotFound).SendString("Icon not found")
+	})
+
+	// Also serve favicon.ico for browsers that look for it by default
+	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
+		// Try different possible locations for the icon
+		iconPaths := []string{
+			"./icon.png",     // Current directory
+			"../icon.png",    // Parent directory (for examples folder)
+			"../../icon.png", // Grandparent directory
+		}
+
+		for _, iconPath := range iconPaths {
+			if _, err := os.Stat(iconPath); err == nil {
+				c.Set("Content-Type", "image/x-icon")
 				return c.SendFile(iconPath)
 			}
 		}
