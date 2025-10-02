@@ -655,7 +655,89 @@ func (an *ApiNote) generateHTML() string {
                 padding-left: 2rem;
             }
         }
+        
+        /* JSON Editor Styles */
+        .json-editor-container {
+            position: relative;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius);
+            margin: 0.75rem 0;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .json-editor-container:focus-within {
+            border-color: var(--primary);
+            border-left-style: dashed;
+            box-shadow: 0 0 0 4px rgb(99 102 241 / 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .json-editor {
+            min-height: 120px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        
+        .json-editor-toolbar {
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .json-editor-btn {
+            background: var(--white);
+            border: 1px solid var(--gray-300);
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .json-editor-btn:hover {
+            background: var(--gray-100);
+            border-color: var(--primary);
+        }
+        
+        .json-validation-message {
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            border-top: 1px solid var(--gray-200);
+            background: var(--gray-50);
+        }
+        
+        .json-validation-message.error {
+            background: #fef2f2;
+            color: var(--danger);
+            border-color: #fecaca;
+        }
+        
+        .json-validation-message.success {
+            background: #f0fdf4;
+            color: var(--success);
+            border-color: #bbf7d0;
+        }
     </style>
+    
+    <!-- CodeMirror for JSON editing -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/lint/lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/lint/json-lint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsonlint/1.6.0/jsonlint.min.js"></script>
+    
 </head>
 <body>
     <div class="container">
@@ -882,11 +964,37 @@ func (an *ApiNote) generateHTML() string {
 						}
 
 						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
-							// if len(endpoint.Parameters) == 0 {
+							// Generate JSON template from request schema
+							jsonTemplate := ""
+							if endpoint.RequestSchema != nil {
+								if template, err := generateJSONTemplate(endpoint.RequestSchema); err == nil {
+									// Properly escape the JSON for HTML attribute
+									jsonTemplate = strings.ReplaceAll(template, `"`, `&quot;`)
+									jsonTemplate = strings.ReplaceAll(jsonTemplate, `'`, `&#39;`)
+									jsonTemplate = strings.ReplaceAll(jsonTemplate, `\`, `\\`)
+								}
+							}
+
 							html.WriteString(`
                             <label>Request Body (JSON):</label>
-                            <textarea rows="5" name="requestBody" placeholder="Enter JSON request body"></textarea>`)
-							// }
+                            <div class="json-editor-container" data-template="` + jsonTemplate + `">
+                                <div class="json-editor-toolbar">
+                                    <button type="button" class="json-editor-btn" onclick="formatJSON(this)">
+                                        <i class="fas fa-magic"></i> Format
+                                    </button>
+                                    <button type="button" class="json-editor-btn" onclick="validateJSON(this)">
+                                        <i class="fas fa-check-circle"></i> Validate
+                                    </button>
+                                    <button type="button" class="json-editor-btn" onclick="clearJSON(this)">
+                                        <i class="fas fa-trash"></i> Clear
+                                    </button>
+                                    <button type="button" class="json-editor-btn" onclick="loadSchemaTemplate(this)">
+                                        <i class="fas fa-file-code"></i> Load Template
+                                    </button>
+                                </div>
+                                <textarea name="requestBody" class="json-editor" placeholder="Enter JSON request body..."></textarea>
+                                <div class="json-validation-message" style="display: none;"></div>
+                            </div>`)
 						}
 
 						html.WriteString(`
@@ -1103,6 +1211,187 @@ func (an *ApiNote) generateHTML() string {
                     .replace(/>/g, "&gt;")
                     .replace(/"/g, "&quot;")
                     .replace(/'/g, "&#039;");
+            }
+
+            // JSON Editor functionality
+            let codeMirrorEditors = {};
+
+            // Initialize CodeMirror editors for all JSON textareas
+            document.addEventListener('DOMContentLoaded', function() {
+                document.querySelectorAll('textarea.json-editor').forEach(function(textarea) {
+                    const editorId = 'editor_' + Math.random().toString(36).substr(2, 9);
+                    
+                    const editor = CodeMirror.fromTextArea(textarea, {
+                        mode: { name: "javascript", json: true },
+                        theme: "default",
+                        lineNumbers: true,
+                        lineWrapping: true,
+                        autoCloseBrackets: true,
+                        matchBrackets: true,
+                        indentUnit: 2,
+                        tabSize: 2,
+                        foldGutter: true,
+                        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                        lint: true,
+                        placeholder: "Enter JSON request body..."
+                    });
+
+                    // Store editor reference
+                    codeMirrorEditors[editorId] = editor;
+                    textarea.setAttribute('data-editor-id', editorId);
+
+                    // Auto-validate on change
+                    editor.on('change', function() {
+                        setTimeout(() => validateJSONEditor(editor), 300);
+                    });
+
+                    // Set default content if template exists
+                    const container = textarea.closest('.json-editor-container');
+                    if (container) {
+                        const form = container.closest('form');
+                        if (form) {
+                            const method = form.querySelector('button[type="submit"]').closest('form').id;
+                            loadDefaultTemplate(editor, method);
+                        }
+                    }
+                });
+            });
+
+            function getEditorFromButton(button) {
+                const container = button.closest('.json-editor-container');
+                const textarea = container.querySelector('textarea.json-editor');
+                const editorId = textarea.getAttribute('data-editor-id');
+                return codeMirrorEditors[editorId];
+            }
+
+            function formatJSON(button) {
+                const editor = getEditorFromButton(button);
+                const content = editor.getValue().trim();
+                
+                if (!content) {
+                    showValidationMessage(button, 'No JSON content to format', 'error');
+                    return;
+                }
+
+                try {
+                    const parsed = JSON.parse(content);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    editor.setValue(formatted);
+                    showValidationMessage(button, 'JSON formatted successfully', 'success');
+                } catch (e) {
+                    showValidationMessage(button, 'Invalid JSON: ' + e.message, 'error');
+                }
+            }
+
+            function validateJSON(button) {
+                const editor = getEditorFromButton(button);
+                validateJSONEditor(editor);
+            }
+
+            function validateJSONEditor(editor) {
+                const content = editor.getValue().trim();
+                const container = editor.getTextArea().closest('.json-editor-container');
+                const messageDiv = container.querySelector('.json-validation-message');
+
+                if (!content) {
+                    messageDiv.style.display = 'none';
+                    return;
+                }
+
+                try {
+                    JSON.parse(content);
+                    showValidationMessage(container, 'Valid JSON ✓', 'success');
+                } catch (e) {
+                    showValidationMessage(container, 'Invalid JSON: ' + e.message, 'error');
+                }
+            }
+
+            function clearJSON(button) {
+                const editor = getEditorFromButton(button);
+                editor.setValue('');
+                const container = button.closest('.json-editor-container');
+                const messageDiv = container.querySelector('.json-validation-message');
+                messageDiv.style.display = 'none';
+            }
+
+            function loadSchemaTemplate(button) {
+                const container = button.closest('.json-editor-container');
+                let template = container.getAttribute('data-template');
+                
+                if (!template || template === '{}') {
+                    showValidationMessage(container, 'No template available for this endpoint', 'error');
+                    return;
+                }
+
+                // Decode HTML entities
+                template = template.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\\\/g, '\\');
+
+                const editor = getEditorFromButton(button);
+                try {
+                    // Parse and reformat the template to ensure proper formatting
+                    const parsed = JSON.parse(template);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    editor.setValue(formatted);
+                    showValidationMessage(container, 'Schema template loaded successfully', 'success');
+                } catch (e) {
+                    showValidationMessage(container, 'Invalid template: ' + e.message, 'error');
+                }
+            }
+
+            function loadDefaultTemplate(editor, method) {
+                // Auto-load templates based on the schema
+                const container = editor.getTextArea().closest('.json-editor-container');
+                let template = container.getAttribute('data-template');
+                
+                if (template && template !== '{}') {
+                    try {
+                        // Decode HTML entities
+                        template = template.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\\\\/g, '\\');
+                        const parsed = JSON.parse(template);
+                        const formatted = JSON.stringify(parsed, null, 2);
+                        editor.setValue(formatted);
+                    } catch (e) {
+                        console.warn('Failed to load default template:', e);
+                    }
+                }
+            }
+
+            function showValidationMessage(elementOrContainer, message, type) {
+                let container;
+                if (elementOrContainer.classList && elementOrContainer.classList.contains('json-editor-container')) {
+                    container = elementOrContainer;
+                } else {
+                    container = elementOrContainer.closest('.json-editor-container');
+                }
+
+                const messageDiv = container.querySelector('.json-validation-message');
+                messageDiv.textContent = message;
+                messageDiv.className = 'json-validation-message ' + type;
+                messageDiv.style.display = 'block';
+
+                if (type === 'success') {
+                    setTimeout(() => {
+                        messageDiv.style.display = 'none';
+                    }, 3000);
+                }
+            }
+
+            // Update the existing form submission to work with CodeMirror
+            const originalFormSubmission = document.querySelector('form');
+            if (originalFormSubmission) {
+                document.addEventListener('submit', function(e) {
+                    if (e.target.tagName === 'FORM') {
+                        const editor = e.target.querySelector('textarea.json-editor');
+                        if (editor && editor.hasAttribute('data-editor-id')) {
+                            const editorId = editor.getAttribute('data-editor-id');
+                            const codeMirrorEditor = codeMirrorEditors[editorId];
+                            if (codeMirrorEditor) {
+                                // Sync CodeMirror content back to textarea
+                                codeMirrorEditor.save();
+                            }
+                        }
+                    }
+                });
             }
         </script>
     </div>
