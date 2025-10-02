@@ -31,6 +31,7 @@ func (an *ApiNote) generateHTML() string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <title>` + an.config.Title + `</title>
@@ -175,11 +176,52 @@ func (an *ApiNote) generateHTML() string {
             transform: translateY(-1px);
         }
 
+        .monitor-section {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-200);
+            text-align: center;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .monitor-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--info);
+            color: var(--white);
+            border: none;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 0.75rem;
+            text-decoration: none;
+        }
+
+        .monitor-button:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .monitor-button i {
+            font-size: 1rem;
+        }
+
         .section-title {
             font-size: 1.25rem;
             font-weight: 600;
             color: var(--gray-900);
-            margin: 0 0 1rem 0;
         }
 
         .version-group, .top-segment-group {
@@ -755,7 +797,13 @@ func (an *ApiNote) generateHTML() string {
             </div>
         </div>
         
-        <h2 class="section-title">API Endpoints</h2>`)
+        <div class="section-header">
+            <h2 class="section-title">API Endpoints</h2>
+            <a href="/api-docs/metrics" target="_blank" class="monitor-button">
+                <i class="fas fa-chart-line"></i>
+                Monitor
+            </a>
+        </div>`)
 
 	// Build a nested structure: version (if exists) > top-level segment > sub-segments > full path > methods
 	type SegmentNode struct {

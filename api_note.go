@@ -25,9 +25,11 @@ package notelink
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -59,6 +61,28 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 		jwtSecret:   jwtSecret,
 	}
 	app.Get("/api-docs", apiNote.Handler())
+
+	app.Get("/api-docs/metrics", monitor.New(monitor.Config{Title: "Service Metrics Page"}))
+
+	// Serve favicon - try multiple possible locations
+	app.Get("/icon.png", func(c *fiber.Ctx) error {
+		// Try different possible locations for the icon
+		iconPaths := []string{
+			"./icon.png",     // Current directory
+			"../icon.png",    // Parent directory (for examples folder)
+			"../../icon.png", // Grandparent directory
+		}
+
+		for _, iconPath := range iconPaths {
+			if _, err := os.Stat(iconPath); err == nil {
+				return c.SendFile(iconPath)
+			}
+		}
+
+		// If no icon found, return 404
+		return c.Status(fiber.StatusNotFound).SendString("Icon not found")
+	})
+
 	return apiNote
 }
 
