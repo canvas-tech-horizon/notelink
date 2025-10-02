@@ -1148,12 +1148,19 @@ func (an *ApiNote) generateHTML() string {
                             }
                         }
 
+                        // Capture all response headers
+                        const headers = {};
+                        for (let [key, value] of response.headers.entries()) {
+                            headers[key] = value;
+                        }
+
                         if (!response.ok) {
                             return response.text().then(text => ({
                                 status: response.status,
                                 statusText: response.statusText,
                                 body: text,
                                 contentType: contentType,
+                                headers: headers,
                                 isError: true
                             }));
                         } else if (contentType.includes('application/json')) {
@@ -1161,7 +1168,8 @@ func (an *ApiNote) generateHTML() string {
                                 status: response.status,
                                 statusText: response.statusText,
                                 body: JSON.stringify(data, null, 2),
-                                contentType: contentType
+                                contentType: contentType,
+                                headers: headers
                             }));
                         } else if (contentType.startsWith('image/')) {
                             return response.blob().then(blob => ({
@@ -1169,6 +1177,7 @@ func (an *ApiNote) generateHTML() string {
                                 statusText: response.statusText,
                                 body: blob,
                                 contentType: contentType,
+                                headers: headers,
                                 isImage: true,
                                 filename: filename
                             }));
@@ -1178,15 +1187,28 @@ func (an *ApiNote) generateHTML() string {
                                 statusText: response.statusText,
                                 body: blob,
                                 contentType: contentType,
+                                headers: headers,
                                 isBlob: true,
                                 filename: filename
                             }));
                         }
                     })
                     .then(result => {
-                        resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br><br>";
+                        resultElement.innerHTML = "Url: " + url + "<br>Status: " + result.status + " " + result.statusText + "<br>";
+                        
+                        // Display response headers
+                        if (result.headers && Object.keys(result.headers).length > 0) {
+                            resultElement.innerHTML += "<br><strong>Response Headers:</strong><br>";
+
+                            for (const [key, value] of Object.entries(result.headers)) {
+                                resultElement.innerHTML += escapeHtml(key) + ": " + escapeHtml(value) + "\n";
+                            }
+                        }
+                        
+                        resultElement.innerHTML += "<br>";
+                        
                         if (result.isError) {
-                            resultElement.innerHTML += '<strong>Error Response:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
+                            resultElement.innerHTML += '<strong>Error Response Body:</strong><br><pre>' + escapeHtml(result.body) + '</pre>';
                         } else if (result.isImage) {
                             const imgUrl = URL.createObjectURL(result.body);
                             resultElement.innerHTML += '<strong>Response (Image):</strong><br><img src="' + imgUrl + '" style="max-width: 100%;" onload="setTimeout(() => URL.revokeObjectURL(this.src), 1000)">';
