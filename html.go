@@ -975,7 +975,7 @@ func (an *ApiNote) generateHTML() string {
 								}
 							}
 
-							if endpoint.Parameters == nil {
+							if endpoint.Parameters == nil || len(endpoint.Parameters) == 0 {
 								html.WriteString(`
                                 <label>Request Body (JSON):</label>
                                 <div class="json-editor-container" data-template="` + jsonTemplate + `">
@@ -1126,15 +1126,28 @@ func (an *ApiNote) generateHTML() string {
                     options.body = formData;
                 } else if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
                     const requestBodyInput = form.querySelector('textarea[name="requestBody"]');
-                    if (requestBodyInput && requestBodyInput.value) {
-                        try {
-                            const jsonBody = JSON.parse(requestBodyInput.value);
-                            options.headers['Content-Type'] = 'application/json';
-                            options.body = JSON.stringify(jsonBody);
-                        } catch (e) {
-                            resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
-                            return;
+                    if (requestBodyInput) {
+                        // Sync CodeMirror content if it exists
+                        if (requestBodyInput.hasAttribute('data-editor-id')) {
+                            const editorId = requestBodyInput.getAttribute('data-editor-id');
+                            const codeMirrorEditor = codeMirrorEditors[editorId];
+                            if (codeMirrorEditor) {
+                                codeMirrorEditor.save();
+                            }
                         }
+                        
+                        const bodyContent = requestBodyInput.value.trim();
+                        if (bodyContent) {
+                            try {
+                                const jsonBody = JSON.parse(bodyContent);
+                                options.headers['Content-Type'] = 'application/json';
+                                options.body = JSON.stringify(jsonBody);
+                            } catch (e) {
+                                resultElement.textContent = 'Invalid JSON in request body: ' + e.message;
+                                return;
+                            }
+                        }
+                        // If bodyContent is empty, don't set any body - this allows requests without bodies
                     }
                 }
 
@@ -1434,12 +1447,11 @@ func (an *ApiNote) generateHTML() string {
             }
 
             // Update the existing form submission to work with CodeMirror
-            const originalFormSubmission = document.querySelector('form');
-            if (originalFormSubmission) {
-                document.addEventListener('submit', function(e) {
-                    if (e.target.tagName === 'FORM') {
-                        const editor = e.target.querySelector('textarea.json-editor');
-                        if (editor && editor.hasAttribute('data-editor-id')) {
+            document.addEventListener('submit', function(e) {
+                if (e.target.tagName === 'FORM') {
+                    const editors = e.target.querySelectorAll('textarea.json-editor');
+                    editors.forEach(function(editor) {
+                        if (editor.hasAttribute('data-editor-id')) {
                             const editorId = editor.getAttribute('data-editor-id');
                             const codeMirrorEditor = codeMirrorEditors[editorId];
                             if (codeMirrorEditor) {
@@ -1447,9 +1459,9 @@ func (an *ApiNote) generateHTML() string {
                                 codeMirrorEditor.save();
                             }
                         }
-                    }
-                });
-            }
+                    });
+                }
+            });
         </script>
     </div>
 </body>
