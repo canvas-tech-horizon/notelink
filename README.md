@@ -29,8 +29,8 @@ go get github.com/canvas-tech-horizon/notelink
 Notelink requires the following dependencies:
 ```go
 require (
-    github.com/gofiber/fiber/v2 v2.52.0
-    github.com/golang-jwt/jwt/v5 v5.2.1
+	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/golang-jwt/jwt/v5 v5.2.2
     github.com/joho/godotenv v1.5.1 // optional, for .env support
 )
 ```
