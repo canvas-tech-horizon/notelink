@@ -251,8 +251,9 @@ func (an *ApiNote) generateHTML() string {
             border-left-color: var(--primary);
         }
 
-        .segment-group > .segment-group:hover {
+        .segment-group > .segment-group {
             border: none;
+            padding-left: 10px;
         }
 
         .path-group {
@@ -279,8 +280,16 @@ func (an *ApiNote) generateHTML() string {
         }
 
         details > *:not(summary) {
-            animation: collapse-open 0.3s ease-out;
             transform-origin: top;
+            overflow: hidden;
+        }
+
+        details[open] > *:not(summary) {
+            animation: collapse-open 0.3s ease-out forwards;
+        }
+
+        details.closing > *:not(summary) {
+            animation: collapse-close 0.2s ease-in forwards;
         }
 
         @keyframes collapse-open {
@@ -291,6 +300,17 @@ func (an *ApiNote) generateHTML() string {
             100% {
                 opacity: 1;
                 transform: scaleY(1) translateY(0);
+            }
+        }
+
+        @keyframes collapse-close {
+            0% {
+                opacity: 1;
+                transform: scaleY(1) translateY(0);
+            }
+            100% {
+                opacity: 0;
+                transform: scaleY(0.8) translateY(-10px);
             }
         }
 
@@ -1121,6 +1141,38 @@ func (an *ApiNote) generateHTML() string {
                 }
             }
 
+            // Handle collapse animations for both open and close
+            document.addEventListener('DOMContentLoaded', function() {
+                // Get all details elements
+                const allDetails = document.querySelectorAll('details');
+                
+                allDetails.forEach(details => {
+                    // Track whether the element is currently open
+                    let isOpen = details.open;
+                    
+                    // Listen to click on summary
+                    const summary = details.querySelector('summary');
+                    if (summary) {
+                        summary.addEventListener('click', function(e) {
+                            // If currently open, we're about to close
+                            if (details.open) {
+                                e.preventDefault();
+                                
+                                // Add closing class to trigger close animation
+                                details.classList.add('closing');
+                                
+                                // Wait for animation to finish before actually closing
+                                setTimeout(() => {
+                                    details.removeAttribute('open');
+                                    details.classList.remove('closing');
+                                }, 300); // Match animation duration
+                            }
+                            // If closing, let it open normally (animation handled by CSS)
+                        });
+                    }
+                });
+            });
+
             window.onload = function() {
                 const authInput = document.getElementById('auth-token');
                 if (authInput) {
@@ -1355,8 +1407,27 @@ func (an *ApiNote) generateHTML() string {
             // JSON Editor functionality
             let codeMirrorEditors = {};
 
-            // Initialize CodeMirror editors for all JSON textareas
+            // Force animation retrigger on details toggle
             document.addEventListener('DOMContentLoaded', function() {
+                // Add toggle event listener to all details elements
+                document.querySelectorAll('details').forEach(function(details) {
+                    details.addEventListener('toggle', function(e) {
+                        if (this.open) {
+                            // Force reflow to retrigger animation
+                            const content = this.querySelector(':scope > *:not(summary)');
+                            if (content) {
+                                // Remove and re-add the animation
+                                content.style.animation = 'none';
+                                // Trigger reflow
+                                void content.offsetHeight;
+                                // Re-apply animation
+                                content.style.animation = '';
+                            }
+                        }
+                    });
+                });
+
+                // Initialize CodeMirror editors for all JSON textareas
                 document.querySelectorAll('textarea.json-editor').forEach(function(textarea) {
                     const editorId = 'editor_' + Math.random().toString(36).substr(2, 9);
                     
