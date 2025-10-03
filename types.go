@@ -43,4 +43,5 @@ type DocumentedRouteInput struct {
 	Params          []Parameter       `json:"params"`
 	SchemasRequest  interface{}       `json:"schemasRequest"`
 	SchemasResponse interface{}       `json:"schemasResponse"`
+	AuthRequired    *bool             `json:"authRequired"` // Optional: explicitly set if auth is required. If nil, auto-detected based on JWT middleware usage
 }
