@@ -486,6 +486,26 @@ func (an *ApiNote) generateHTML() string {
             color: var(--white);
         }
 
+        .method.HEAD {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+            color: var(--white);
+        }
+
+        .method.CONNECT {
+            background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+            color: var(--white);
+        }
+
+        .method.OPTIONS {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            color: var(--white);
+        }
+
+        .method.TRACE {
+            background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+            color: var(--white);
+        }
+
         .endpoint-path {
             font-family: 'JetBrains Mono', monospace;
             font-size: 0.9rem;

@@ -191,6 +191,14 @@ func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
 		an.app.Delete(an.config.BasePath+input.Path, handlers...)
 	case "PATCH":
 		an.app.Patch(an.config.BasePath+input.Path, handlers...)
+	case "HEAD":
+		an.app.Head(an.config.BasePath+input.Path, handlers...)
+	case "CONNECT":
+		an.app.Connect(an.config.BasePath+input.Path, handlers...)
+	case "OPTIONS":
+		an.app.Options(an.config.BasePath+input.Path, handlers...)
+	case "TRACE":
+		an.app.Trace(an.config.BasePath+input.Path, handlers...)
 	default:
 		return fmt.Errorf("unsupported HTTP method: %s", input.Method)
 	}
