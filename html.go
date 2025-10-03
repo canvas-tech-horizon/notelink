@@ -1046,7 +1046,7 @@ func (an *ApiNote) generateHTML() string {
 								}
 							}
 
-							if endpoint.Parameters == nil || len(endpoint.Parameters) == 0 {
+							if endpoint.RequestSchema != nil {
 								html.WriteString(`
                                 <label>Request Body (JSON):</label>
                                 <div class="json-editor-container" data-template="` + jsonTemplate + `">
