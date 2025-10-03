@@ -28,6 +28,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/golang-jwt/jwt/v5"
@@ -52,7 +53,10 @@ type ApiNote struct {
 //
 // Returns a pointer to the initialized ApiNote.
 func NewApiNote(config *Config, jwtSecret string) *ApiNote {
-	app := fiber.New()
+	app := fiber.New(fiber.Config{
+		JSONEncoder: json.Marshal,
+		JSONDecoder: json.Unmarshal,
+	})
 	apiNote := &ApiNote{
 		config:      config,
 		endpoints:   make(map[string]Endpoint),
@@ -63,6 +67,11 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 	app.Get("/api-docs", apiNote.Handler())
 
 	app.Get("/api-docs/metrics", monitor.New(monitor.Config{Title: "Service Metrics Page"}))
+
+	app.Get("/api-docs/indent", func(c *fiber.Ctx) error {
+		data, _ := json.MarshalIndent(app.GetRoutes(true), "", "  ")
+		return c.Status(http.StatusOK).SendString(string(data))
+	})
 
 	// Serve favicon - try multiple possible locations
 	app.Get("/icon.png", func(c *fiber.Ctx) error {
