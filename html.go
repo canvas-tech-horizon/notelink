@@ -251,6 +251,10 @@ func (an *ApiNote) generateHTML() string {
             border-left-color: var(--primary);
         }
 
+        .segment-group > .segment-group:hover {
+            border: none;
+        }
+
         .path-group {
             margin: 0.25rem 0;
             background: transparent;
@@ -364,12 +368,6 @@ func (an *ApiNote) generateHTML() string {
             color: var(--gray-800);
             background: transparent;
             padding: 0.5rem 0 0.5rem 1rem;
-        }
-
-        .segment-group > summary:hover {
-            background: var(--gray-50);
-            color: var(--primary);
-            border-radius: 0.5rem;
         }
 
         .method-group > summary {
@@ -865,8 +863,8 @@ func (an *ApiNote) generateHTML() string {
 				}
 				current = current.Children[topSeg]
 
-				// Process deeper segments
-				for i := versionIdx + 2; i < len(segments)-1; i++ {
+				// Process all remaining segments to build the full hierarchy
+				for i := versionIdx + 2; i < len(segments); i++ {
 					seg := segments[i]
 					if current.Children[seg] == nil {
 						current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
@@ -885,8 +883,8 @@ func (an *ApiNote) generateHTML() string {
 				}
 				current := nonVersionedRoot.Children[topSeg]
 
-				// Process deeper segments
-				for i := 1; i < len(segments)-1; i++ {
+				// Process all remaining segments to build the full hierarchy
+				for i := 1; i < len(segments); i++ {
 					seg := segments[i]
 					if current.Children[seg] == nil {
 						current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
