@@ -38,12 +38,13 @@ import (
 // It integrates with a Fiber application to serve both the API endpoints
 // and their documentation.
 type ApiNote struct {
-	config         *Config             // Configuration for the API documentation
-	endpoints      map[string]Endpoint // Registered endpoints with their details
-	app            *fiber.App          // Underlying Fiber application
-	middlewares    []fiber.Handler     // Middleware stack applied to routes
-	jwtMiddlewares []fiber.Handler     // JWT middleware stack (tracked separately for AuthRequired)
-	jwtSecret      string              // Secret key for JWT signing and verification
+	config               *Config             // Configuration for the API documentation
+	endpoints            map[string]Endpoint // Registered endpoints with their details
+	app                  *fiber.App          // Underlying Fiber application
+	middlewares          []fiber.Handler     // Middleware stack applied to routes
+	jwtMiddlewares       []fiber.Handler     // JWT middleware stack (tracked separately for AuthRequired)
+	customAuthMiddleware []fiber.Handler     // Custom authentication middleware stack
+	jwtSecret            string              // Secret key for JWT signing and verification
 }
 
 // NewApiNote creates a new ApiNote instance with the provided configuration and JWT secret.
@@ -59,12 +60,13 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 		JSONDecoder: json.Unmarshal,
 	})
 	apiNote := &ApiNote{
-		config:         config,
-		endpoints:      make(map[string]Endpoint),
-		app:            app,
-		middlewares:    []fiber.Handler{},
-		jwtMiddlewares: []fiber.Handler{},
-		jwtSecret:      jwtSecret,
+		config:               config,
+		endpoints:            make(map[string]Endpoint),
+		app:                  app,
+		middlewares:          []fiber.Handler{},
+		jwtMiddlewares:       []fiber.Handler{},
+		customAuthMiddleware: []fiber.Handler{},
+		jwtSecret:            jwtSecret,
 	}
 	app.Get("/api-docs", apiNote.Handler())
 
@@ -145,6 +147,20 @@ func (an *ApiNote) UseJWT() {
 	an.jwtMiddlewares = append(an.jwtMiddlewares, an.JWTMiddleware())
 }
 
+// UseCustomAuth adds custom authentication middleware to all subsequent routes.
+// Routes defined after calling this method will have AuthRequired set to true
+// in their documentation, indicating they require authentication.
+//
+// This method allows you to use your own authentication logic instead of the
+// built-in JWT middleware while still properly documenting that routes require authentication.
+//
+// Example:
+//
+//	api.UseCustomAuth(MyCustomAuthMiddleware()) // All routes defined after this will require custom authentication
+func (an *ApiNote) UseCustomAuth(middleware ...fiber.Handler) {
+	an.customAuthMiddleware = append(an.customAuthMiddleware, middleware...)
+}
+
 // DocumentedRoute registers an API endpoint with its documentation and handler.
 // It accepts a DocumentedRouteInput object containing the route details and
 // processes it to add the route to the Fiber app and store endpoint details for documentation.
@@ -191,8 +207,8 @@ func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
 	if input.AuthRequired != nil {
 		endpoint.AuthRequired = *input.AuthRequired
 	} else {
-		// Auto-detect: true if JWT middleware is active
-		endpoint.AuthRequired = len(an.jwtMiddlewares) > 0
+		// Auto-detect: true if JWT middleware or custom auth middleware is active
+		endpoint.AuthRequired = len(an.jwtMiddlewares) > 0 || len(an.customAuthMiddleware) > 0
 	}
 
 	if input.SchemasRequest != nil {
@@ -204,14 +220,17 @@ func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
 
 	an.endpoints[key] = endpoint
 
-	// Combine custom middlewares and JWT middlewares, then add the handler
-	// handlers := append(an.middlewares, an.jwtMiddlewares...)
-	// handlers = append(handlers, input.Handler)
+	// Combine authentication middlewares (JWT or custom), custom middlewares, then add the handler
 	handlers := []fiber.Handler{}
 	if endpoint.AuthRequired {
+		// Add JWT middlewares if present
 		handlers = append(handlers, an.jwtMiddlewares...)
+		// Add custom auth middlewares if present
+		handlers = append(handlers, an.customAuthMiddleware...)
 	}
+	// Add custom non-auth middlewares
 	handlers = append(handlers, an.middlewares...)
+	// Add the route handler
 	handlers = append(handlers, input.Handler)
 	switch strings.ToUpper(input.Method) {
 	case "GET":
