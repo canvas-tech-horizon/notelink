@@ -89,7 +89,7 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 		for _, iconPath := range iconPaths {
 			if _, err := os.Stat(iconPath); err == nil {
 				c.Set("Content-Type", "image/png")
-				c.Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
+				// c.Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 				return c.SendFile(iconPath)
 			}
 		}
