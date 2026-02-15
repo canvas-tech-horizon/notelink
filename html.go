@@ -22,6 +22,34 @@ func getFullPath(path string) string {
 	return strings.Trim(path, "/")
 }
 
+// escapeJavaScript escapes a string for safe inclusion in JavaScript code
+func escapeJavaScript(s string) string {
+	replacer := strings.NewReplacer(
+		`\`, `\\`,
+		`'`, `\'`,
+		`"`, `\"`,
+		"\n", `\n`,
+		"\r", `\r`,
+		"\t", `\t`,
+		"<", `\u003c`,
+		">", `\u003e`,
+		"&", `\u0026`,
+	)
+	return replacer.Replace(s)
+}
+
+// escapeHTML escapes a string for safe inclusion in HTML
+func escapeHTML(s string) string {
+	replacer := strings.NewReplacer(
+		`&`, `&amp;`,
+		`<`, `&lt;`,
+		`>`, `&gt;`,
+		`"`, `&quot;`,
+		`'`, `&#39;`,
+	)
+	return replacer.Replace(s)
+}
+
 // generateHTML creates documentation with progressive segment grouping and method grouping
 func (an *ApiNote) generateHTML() string {
 	var html strings.Builder
@@ -37,7 +65,7 @@ func (an *ApiNote) generateHTML() string {
     <link rel="apple-touch-icon" href="/icon.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <title>` + an.config.Title + `</title>
+    <title>` + escapeHTML(an.config.Title) + `</title>
     <style>
         :root {
             --primary: #e9902bff;
@@ -825,15 +853,15 @@ func (an *ApiNote) generateHTML() string {
 <body>
     <div class="container">
         <div class="header">
-            <h1>` + an.config.Title + `</h1>
-            <p class="subtitle">` + an.config.Description + `</p>
-            <span class="version-badge">` + an.config.Version + `</span>
+            <h1>` + escapeHTML(an.config.Title) + `</h1>
+            <p class="subtitle">` + escapeHTML(an.config.Description) + `</p>
+            <span class="version-badge">` + escapeHTML(an.config.Version) + `</span>
         </div>
-        
+
         <div class="auth-section">
             <h2><i class="fas fa-key"></i> Authorize</h2>
             <div class="auth-input-group">
-                <input type="text" id="auth-token" placeholder="Enter JWT Bearer Token (e.g., Bearer eyJ...)" value="` + an.config.AuthToken + `">
+                <input type="text" id="auth-token" placeholder="Enter JWT Bearer Token (e.g., Bearer eyJ...)" value="` + escapeHTML(an.config.AuthToken) + `">
                 <button onclick="setAuthToken()">Set Token</button>
             </div>
         </div>
@@ -968,9 +996,9 @@ func (an *ApiNote) generateHTML() string {
 						html.WriteString(`
             <details class="method-group">
                 <summary>
-                    <span class="method ` + endpoint.Method + `">` + endpoint.Method + `</span>
-                    <span class="endpoint-path">` + endpoint.Path + `</span>
-                    <span class="endpoint-description">` + endpoint.Description + `</span>` + lockIcon + `
+                    <span class="method ` + escapeHTML(endpoint.Method) + `">` + escapeHTML(endpoint.Method) + `</span>
+                    <span class="endpoint-path">` + escapeHTML(endpoint.Path) + `</span>
+                    <span class="endpoint-description">` + escapeHTML(endpoint.Description) + `</span>` + lockIcon + `
                 </summary>
                 <div>`)
 
@@ -985,7 +1013,7 @@ func (an *ApiNote) generateHTML() string {
 									required = `<span class="required"> (required)</span>`
 								}
 								html.WriteString(`
-                            <li><strong>` + param.Name + `</strong> (` + param.In + `, ` + param.Type + `): ` + param.Description + required + `</li>`)
+                            <li><strong>` + escapeHTML(param.Name) + `</strong> (` + escapeHTML(param.In) + `, ` + escapeHTML(param.Type) + `): ` + escapeHTML(param.Description) + required + `</li>`)
 							}
 							html.WriteString(`
                         </ul>
@@ -1043,13 +1071,13 @@ func (an *ApiNote) generateHTML() string {
 							if param.Required {
 								requiredAttr = " required"
 							}
-							labelText := param.Name + ` (` + param.In + `)`
+							labelText := escapeHTML(param.Name) + ` (` + escapeHTML(param.In) + `)`
 							if param.Required {
 								labelText += ` <span class="required">* required</span>`
 							}
 							html.WriteString(`
                             <label>` + labelText + `:</label>
-                            <input type="` + inputType + `" name="` + param.Name + `" placeholder="Enter ` + param.Name + `"` + requiredAttr + ` data-in="` + param.In + `">`)
+                            <input type="` + escapeHTML(inputType) + `" name="` + escapeHTML(param.Name) + `" placeholder="Enter ` + escapeHTML(param.Name) + `"` + requiredAttr + ` data-in="` + escapeHTML(param.In) + `">`)
 						}
 
 						if endpoint.Method == "POST" || endpoint.Method == "PUT" {
@@ -1132,7 +1160,7 @@ func (an *ApiNote) generateHTML() string {
 
 	html.WriteString(`
         <script>
-            let authToken = '` + an.config.AuthToken + `';
+            let authToken = '` + escapeJavaScript(an.config.AuthToken) + `';
 
             if (!authToken) {
                 const storedToken = localStorage.getItem('authToken');
@@ -1224,7 +1252,7 @@ func (an *ApiNote) generateHTML() string {
                     }
                 });
 
-                const baseUrl = 'http://' + '` + an.config.Host + `';
+                const baseUrl = 'http://' + '` + escapeJavaScript(an.config.Host) + `';
                 const url = baseUrl + modifiedPath + (queryParams.toString() ? '?' + queryParams.toString() : '');
 
                 const options = {

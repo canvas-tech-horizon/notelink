@@ -1,0 +1,92 @@
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck      # Check for unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Reports suspicious constructs
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Advanced Go linting
+    - typecheck     # Type check Go code
+    - unused        # Check for unused code
+    - misspell      # Check for misspelled words
+    - gofmt         # Check code formatting
+    - goimports     # Check import formatting
+    - gocritic      # Comprehensive Go source code linter
+    - revive        # Fast, configurable, extensible, flexible linter
+    - gosec         # Security issues
+    - bodyclose     # Check HTTP response bodies are closed
+    - noctx         # Check for sending HTTP requests without context
+    - rowserrcheck  # Check for proper handling of sql.Rows errors
+    - sqlclosecheck # Check for unclosed sql.DB and sql.Rows
+    - dupl          # Check for code duplication
+    - unconvert     # Remove unnecessary type conversions
+    - prealloc      # Find slice declarations that could be preallocated
+    - exportloopref # Check for pointers to loop variables
+    - nilerr        # Find code returning nil even when non-nil error is checked
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    enable-all: true
+
+  gofmt:
+    simplify: true
+
+  goimports:
+    local-prefixes: github.com/canvas-tech-horizon/notelink
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+      - experimental
+      - opinionated
+
+  revive:
+    confidence: 0.8
+
+  gosec:
+    severity: medium
+    confidence: medium
+    excludes:
+      - G104  # Audit errors not checked - we have errcheck for this
+      - G304  # File path provided as taint input - false positives
+
+  dupl:
+    threshold: 100
+
+  misspell:
+    locale: US
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - errcheck
+
+    # Ignore complexity in example code
+    - path: examples/
+      linters:
+        - gocritic
+        - dupl
+
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true

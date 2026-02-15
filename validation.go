@@ -284,7 +284,18 @@ func validateFieldType(value interface{}, expectedType reflect.Type, fieldName s
 				Type:    "type_error",
 			}
 		}
-		// TODO: Validate array elements recursively
+
+		// Validate array elements recursively
+		elemType := expectedType.Elem()
+		sliceValue := reflect.ValueOf(value)
+		for i := 0; i < sliceValue.Len(); i++ {
+			elem := sliceValue.Index(i).Interface()
+			elemFieldName := fmt.Sprintf("%s[%d]", fieldName, i)
+
+			if err := validateFieldType(elem, elemType, elemFieldName); err != nil {
+				return err
+			}
+		}
 
 	case reflect.Map:
 		if actualValue.Kind() != reflect.Map {
@@ -304,7 +315,24 @@ func validateFieldType(value interface{}, expectedType reflect.Type, fieldName s
 				Type:    "type_error",
 			}
 		}
-		// TODO: Validate nested struct recursively
+
+		// Validate nested struct recursively
+		nestedMap, ok := value.(map[string]interface{})
+		if !ok {
+			return &ValidationError{
+				Field:   fieldName,
+				Message: fmt.Sprintf("Field '%s' must be a valid object", fieldName),
+				Type:    "type_error",
+			}
+		}
+
+		nestedErrors := validateStruct(nestedMap, expectedType)
+		if len(nestedErrors) > 0 {
+			// Return the first nested error with updated field path
+			firstErr := nestedErrors[0]
+			firstErr.Field = fmt.Sprintf("%s.%s", fieldName, firstErr.Field)
+			return &firstErr
+		}
 	}
 
 	return nil
