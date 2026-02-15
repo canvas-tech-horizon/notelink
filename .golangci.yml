@@ -25,7 +25,6 @@ linters:
     - dupl          # Check for code duplication
     - unconvert     # Remove unnecessary type conversions
     - prealloc      # Find slice declarations that could be preallocated
-    - exportloopref # Check for pointers to loop variables
     - nilerr        # Find code returning nil even when non-nil error is checked
 
 linters-settings:

@@ -16,9 +16,9 @@ type SimpleUser struct {
 }
 
 type UserWithTypes struct {
-	Height    float64 `json:"height"`
 	Name      string  `json:"name"`
 	CreatedAt string  `json:"created_at"`
+	Height    float64 `json:"height"`
 	ID        uint    `json:"id"`
 	Age       int     `json:"age"`
 	IsActive  bool    `json:"is_active"`
@@ -37,9 +37,9 @@ type AddressType struct {
 }
 
 type UserWithPointers struct {
-	Name  string  `json:"name"`
 	Email *string `json:"email,omitempty"`
 	Age   *int    `json:"age"`
+	Name  string  `json:"name"`
 }
 
 type UserWithTimeFields struct {
@@ -269,9 +269,6 @@ func TestGoTypeToTsType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// This test verifies type mapping through the generateTypeScriptSchema function
 			// since goTypeToTsType is not exported
-			type TestStruct struct {
-				Field interface{}
-			}
 		})
 	}
 }
@@ -295,10 +292,6 @@ func TestGenerateStringExample(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.fieldName, func(t *testing.T) {
-			type TestStruct struct {
-				Field string `json:"-"`
-			}
-
 			// Test by creating a struct with the field name and checking the JSON template
 			result := generateStringExample(strings.ToLower(tt.fieldName))
 			if result != tt.expected {

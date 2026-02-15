@@ -93,9 +93,8 @@ type SecurityScheme struct {
 
 // JSONSchema represents JSON Schema (compatible with OpenAPI 3.1)
 type JSONSchema struct {
-	Properties           map[string]*JSONSchema `json:"properties,omitempty"`
-	Required             []string               `json:"required,omitempty"`
 	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"`
+	Properties           map[string]*JSONSchema `json:"properties,omitempty"`
 	Items                *JSONSchema            `json:"items,omitempty"`
 	Minimum              *float64               `json:"minimum,omitempty"`
 	Type                 string                 `json:"type,omitempty"`
@@ -103,6 +102,7 @@ type JSONSchema struct {
 	Title                string                 `json:"title,omitempty"`
 	Description          string                 `json:"description,omitempty"`
 	Ref                  string                 `json:"$ref,omitempty"`
+	Required             []string               `json:"required,omitempty"`
 	Nullable             bool                   `json:"nullable,omitempty"`
 }
 
@@ -298,7 +298,7 @@ func (an *ApiNote) endpointToOperation(endpoint *Endpoint, componentSchemas map[
 }
 
 // generateJSONSchema converts a Go type to JSON Schema format
-func generateJSONSchema(name string, schema interface{}) (*JSONSchema, map[string]*JSONSchema) {
+func generateJSONSchema(name string, schema interface{}) (mainSchema *JSONSchema, componentSchemas map[string]*JSONSchema) {
 	if schema == nil {
 		return &JSONSchema{Type: "object"}, nil
 	}
@@ -327,11 +327,11 @@ func generateJSONSchema(name string, schema interface{}) (*JSONSchema, map[strin
 	}
 
 	// Generate schemas for all nested structs
-	componentSchemas := make(map[string]*JSONSchema)
+	componentSchemas = make(map[string]*JSONSchema)
 	collectComponentSchemas(typ, componentSchemas)
 
 	// Generate the main schema
-	mainSchema := structToJSONSchema(typ, name, componentSchemas)
+	mainSchema = structToJSONSchema(typ, name, componentSchemas)
 
 	if isArray {
 		return &JSONSchema{

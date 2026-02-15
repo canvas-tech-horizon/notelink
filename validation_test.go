@@ -18,9 +18,9 @@ type TestUser struct {
 }
 
 type TestUserWithOptional struct {
+	Age      *int   `json:"age"`
 	Name     string `json:"name"`
 	Email    string `json:"email,omitempty"`
-	Age      *int   `json:"age"`
 	IsActive bool   `json:"is_active"`
 }
 
@@ -47,12 +47,12 @@ type TestDeepNested struct {
 // TestValidateParameters tests parameter validation for different types and locations
 func TestValidateParameters(t *testing.T) {
 	tests := []struct {
+		headers     map[string]string
+		url         string
 		name        string
 		params      []Parameter
-		url         string
-		headers     map[string]string
-		expectError bool
 		errorCount  int
+		expectError bool
 	}{
 		{
 			name: "Valid string parameter",
@@ -199,11 +199,11 @@ func TestValidateParameters(t *testing.T) {
 // TestValidateRequestBody tests request body validation
 func TestValidateRequestBody(t *testing.T) {
 	tests := []struct {
-		name        string
-		body        string
 		schema      interface{}
-		expectError bool
+		body        string
+		name        string
 		errorField  string
+		expectError bool
 	}{
 		{
 			name:        "Valid simple struct",
@@ -309,10 +309,8 @@ func TestValidateRequestBody(t *testing.T) {
 						t.Errorf("Expected error field '%s', but it was not found in errors", tt.errorField)
 					}
 				}
-			} else {
-				if resp.StatusCode != 200 {
-					t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
-				}
+			} else if resp.StatusCode != 200 {
+				t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
 			}
 		})
 	}
@@ -321,11 +319,11 @@ func TestValidateRequestBody(t *testing.T) {
 // TestValidateNestedStruct tests nested struct validation
 func TestValidateNestedStruct(t *testing.T) {
 	tests := []struct {
-		name        string
-		body        string
 		schema      interface{}
-		expectError bool
+		body        string
+		name        string
 		errorField  string
+		expectError bool
 	}{
 		{
 			name: "Valid nested struct",
@@ -447,10 +445,10 @@ func TestValidateNestedStruct(t *testing.T) {
 // TestValidateArrayOfStructs tests array of structs validation
 func TestValidateArrayOfStructs(t *testing.T) {
 	tests := []struct {
-		name        string
 		body        string
-		expectError bool
+		name        string
 		errorField  string
+		expectError bool
 	}{
 		{
 			name: "Valid array of structs",

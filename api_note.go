@@ -38,13 +38,13 @@ import (
 // It integrates with a Fiber application to serve both the API endpoints
 // and their documentation.
 type ApiNote struct {
-	middlewares          []fiber.Handler     // Middleware stack applied to routes
-	jwtMiddlewares       []fiber.Handler     // JWT middleware stack (tracked separately for AuthRequired)
-	customAuthMiddleware []fiber.Handler     // Custom authentication middleware stack
-	jwtSecret            string              // Secret key for JWT signing and verification
-	config               *Config             // Configuration for the API documentation
-	endpoints            map[string]Endpoint // Registered endpoints with their details
-	app                  *fiber.App          // Underlying Fiber application
+	endpoints            map[string]Endpoint
+	config               *Config
+	app                  *fiber.App
+	jwtSecret            string
+	middlewares          []fiber.Handler
+	jwtMiddlewares       []fiber.Handler
+	customAuthMiddleware []fiber.Handler
 }
 
 // NewApiNote creates a new ApiNote instance with the provided configuration and JWT secret.

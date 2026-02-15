@@ -11,9 +11,9 @@ import (
 
 // Benchmark structures
 type BenchUser struct {
-	Salary   float64 `json:"salary"`
 	Name     string  `json:"name"`
 	Email    string  `json:"email"`
+	Salary   float64 `json:"salary"`
 	ID       int     `json:"id"`
 	Age      int     `json:"age"`
 	IsActive bool    `json:"is_active"`
@@ -28,8 +28,8 @@ type BenchOrder struct {
 }
 
 type BenchItem struct {
-	Price    float64 `json:"price"`
 	Name     string  `json:"name"`
+	Price    float64 `json:"price"`
 	ID       int     `json:"id"`
 	Quantity int     `json:"quantity"`
 }
