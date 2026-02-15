@@ -97,7 +97,7 @@ func (an *ApiNote) generateScalarHTML() string {
     <script
         id="api-reference"
         data-url="/api-docs/openapi.json"
-        data-configuration='{"theme":"deepSpace","showSidebar":true,"hideDarkModeToggle":false,"hideModels":false,"hideDownloadButton":false,"searchHotKey":"k"}'
+        data-configuration='{"showToolbar":"never","theme":"mars","hideClientButton":true,"customCss":":root { --scalar-font: ui-sans-serif, system-ui; --scalar-radius: 14px; --scalar-primary: 265 84% 54%; } [data-theme=\"dark\"] { --scalar-background-1: 230 15% 10%; --scalar-text-1: 0 0% 98%; }"}'
     ></script>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
