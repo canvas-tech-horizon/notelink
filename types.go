@@ -1,15 +1,18 @@
 package notelink
 
-import "github.com/gofiber/fiber/v2"
+import "github.com/gofiber/fiber/v3"
 
 // Config holds the API documentation configuration
 type Config struct {
-	Title       string
-	Description string
-	Version     string
-	Host        string
-	BasePath    string
-	AuthToken   string // Optional authorization token (e.g., Bearer token)
+	Title                string
+	Description          string
+	Version              string
+	Host                 string
+	BasePath             string
+	AuthToken            string // Optional authorization token (e.g., Bearer token)
+	DocsUI               string // UI to use for /api-docs endpoint: "scalar" (default) or "swagger"
+	EnableValidation     bool   // Enable server-side validation (default: true)
+	StrictTypeValidation bool   // Strict type checking vs coercion (default: false)
 }
 
 // Parameter represents an API parameter

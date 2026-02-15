@@ -29,8 +29,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-json"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/monitor"
+	"github.com/gofiber/contrib/v3/monitor"
+	"github.com/gofiber/fiber/v3"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -68,17 +68,33 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 		customAuthMiddleware: []fiber.Handler{},
 		jwtSecret:            jwtSecret,
 	}
-	app.Get("/api-docs", apiNote.Handler())
+	app.Get("/api-docs", func(c fiber.Ctx) error {
+		// Default to Scalar if DocsUI is empty or explicitly set to "scalar"
+		if apiNote.config.DocsUI == "" || apiNote.config.DocsUI == "scalar" {
+			return apiNote.ScalarUIHandler()(c)
+		} else if apiNote.config.DocsUI == "swagger" {
+			return apiNote.SwaggerUIHandler()(c)
+		}
+		// Fallback to original HTML handler for any other value
+		return apiNote.Handler()(c)
+	})
 
 	app.Get("/api-docs/metrics", monitor.New(monitor.Config{Title: "Service Metrics Page"}))
 
-	app.Get("/api-docs/indent", func(c *fiber.Ctx) error {
+	app.Get("/api-docs/indent", func(c fiber.Ctx) error {
 		data, _ := json.MarshalIndent(app.GetRoutes(true), "", "  ")
 		return c.Status(http.StatusOK).SendString(string(data))
 	})
 
+	// Serve OpenAPI JSON spec at /api-docs/openapi.json
+	app.Get("/api-docs/openapi.json", func(c fiber.Ctx) error {
+		spec := apiNote.GenerateOpenAPISpec()
+		c.Set("Content-Type", "application/json")
+		return c.JSON(spec)
+	})
+
 	// Serve favicon - try multiple possible locations
-	app.Get("/icon.png", func(c *fiber.Ctx) error {
+	app.Get("/icon.png", func(c fiber.Ctx) error {
 		// Try different possible locations for the icon
 		iconPaths := []string{
 			"./icon.png",     // Current directory
@@ -99,7 +115,7 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 	})
 
 	// Also serve favicon.ico for browsers that look for it by default
-	app.Get("/favicon.ico", func(c *fiber.Ctx) error {
+	app.Get("/favicon.ico", func(c fiber.Ctx) error {
 		// Try different possible locations for the icon
 		iconPaths := []string{
 			"./icon.png",     // Current directory
@@ -221,36 +237,81 @@ func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
 	an.endpoints[key] = endpoint
 
 	// Combine authentication middlewares (JWT or custom), custom middlewares, then add the handler
-	handlers := []fiber.Handler{}
+	handlers := []any{}
 	if endpoint.AuthRequired {
 		// Add JWT middlewares if present
-		handlers = append(handlers, an.jwtMiddlewares...)
+		for _, h := range an.jwtMiddlewares {
+			handlers = append(handlers, h)
+		}
 		// Add custom auth middlewares if present
-		handlers = append(handlers, an.customAuthMiddleware...)
+		for _, h := range an.customAuthMiddleware {
+			handlers = append(handlers, h)
+		}
 	}
+
+	// Add validation middleware if validation is needed
+	// Validation is enabled by default when parameters or request schema are defined
+	if len(endpoint.Parameters) > 0 || endpoint.RequestSchema != nil {
+		validationHandler := func(c fiber.Ctx) error {
+			// Validate parameters
+			if len(endpoint.Parameters) > 0 {
+				if err := ValidateParameters(c, endpoint.Parameters); err != nil {
+					return c.Status(fiber.StatusBadRequest).JSON(err)
+				}
+			}
+
+			// Validate request body for POST/PUT/PATCH
+			if endpoint.RequestSchema != nil &&
+				(endpoint.Method == "POST" || endpoint.Method == "PUT" || endpoint.Method == "PATCH") {
+				if err := ValidateRequestBody(c, endpoint.RequestSchema); err != nil {
+					return c.Status(fiber.StatusBadRequest).JSON(err)
+				}
+			}
+
+			return c.Next()
+		}
+		handlers = append(handlers, validationHandler)
+	}
+
 	// Add custom non-auth middlewares
-	handlers = append(handlers, an.middlewares...)
+	for _, h := range an.middlewares {
+		handlers = append(handlers, h)
+	}
 	// Add the route handler
 	handlers = append(handlers, input.Handler)
+
+	// Ensure we have at least one handler
+	if len(handlers) == 0 {
+		return fmt.Errorf("at least one handler is required")
+	}
+
+	path := an.config.BasePath + input.Path
+	// Get first handler and rest as varargs for v3 API
+	firstHandler := handlers[0]
+	restHandlers := []any{}
+	if len(handlers) > 1 {
+		restHandlers = handlers[1:]
+	}
+
 	switch strings.ToUpper(input.Method) {
 	case "GET":
-		an.app.Get(an.config.BasePath+input.Path, handlers...)
+		an.app.Get(path, firstHandler, restHandlers...)
 	case "POST":
-		an.app.Post(an.config.BasePath+input.Path, handlers...)
+		an.app.Post(path, firstHandler, restHandlers...)
 	case "PUT":
-		an.app.Put(an.config.BasePath+input.Path, handlers...)
+		an.app.Put(path, firstHandler, restHandlers...)
 	case "DELETE":
-		an.app.Delete(an.config.BasePath+input.Path, handlers...)
+		an.app.Delete(path, firstHandler, restHandlers...)
 	case "PATCH":
-		an.app.Patch(an.config.BasePath+input.Path, handlers...)
+		an.app.Patch(path, firstHandler, restHandlers...)
 	case "HEAD":
-		an.app.Head(an.config.BasePath+input.Path, handlers...)
+		an.app.Head(path, firstHandler, restHandlers...)
 	case "CONNECT":
-		an.app.Connect(an.config.BasePath+input.Path, handlers...)
+		an.app.Connect(path, firstHandler, restHandlers...)
 	case "OPTIONS":
-		an.app.Options(an.config.BasePath+input.Path, handlers...)
+		an.app.Options(path, firstHandler, restHandlers...)
 	case "TRACE":
-		an.app.Trace(an.config.BasePath+input.Path, handlers...)
+		an.app.Trace(path, firstHandler, restHandlers...)
 	default:
 		return fmt.Errorf("unsupported HTTP method: %s", input.Method)
 	}
@@ -271,7 +332,7 @@ func (an *ApiNote) Fiber() *fiber.App {
 //
 // The returned handler sets the Content-Type to "text/html" and responds with status 200.
 func (an *ApiNote) Handler() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		html := an.generateHTML()
 		c.Set("Content-Type", "text/html")
 		return c.Status(http.StatusOK).SendString(html)
@@ -289,7 +350,7 @@ func (an *ApiNote) Handler() fiber.Handler {
 //
 //	api.Use(api.JWTMiddleware())
 func (an *ApiNote) JWTMiddleware() fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(c fiber.Ctx) error {
 		authHeader := c.Get("Authorization")
 		if authHeader == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Authorization header required"})
