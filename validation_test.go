@@ -3,6 +3,7 @@ package notelink
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -162,7 +163,7 @@ func TestValidateParameters(t *testing.T) {
 				return c.SendString("OK")
 			})
 
-			req := httptest.NewRequest("GET", tt.url, nil)
+			req := httptest.NewRequest("GET", tt.url, http.NoBody)
 			for k, v := range tt.headers {
 				req.Header.Set(k, v)
 			}
@@ -171,6 +172,7 @@ func TestValidateParameters(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send test request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if tt.expectError {
 				if resp.StatusCode == 200 {
@@ -187,10 +189,8 @@ func TestValidateParameters(t *testing.T) {
 				if len(validationErr.Errors) != tt.errorCount {
 					t.Errorf("Expected %d errors, got %d", tt.errorCount, len(validationErr.Errors))
 				}
-			} else {
-				if resp.StatusCode != 200 {
-					t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
-				}
+			} else if resp.StatusCode != 200 {
+				t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
 			}
 		})
 	}
@@ -283,6 +283,7 @@ func TestValidateRequestBody(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send test request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if tt.expectError {
 				if resp.StatusCode == 200 {
@@ -417,6 +418,7 @@ func TestValidateNestedStruct(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send test request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if tt.expectError {
 				if resp.StatusCode == 200 {
@@ -435,10 +437,8 @@ func TestValidateNestedStruct(t *testing.T) {
 						t.Errorf("Expected error field '%s', got '%s'", tt.errorField, validationErr.Errors[0].Field)
 					}
 				}
-			} else {
-				if resp.StatusCode != 200 {
-					t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
-				}
+			} else if resp.StatusCode != 200 {
+				t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
 			}
 		})
 	}
@@ -505,6 +505,7 @@ func TestValidateArrayOfStructs(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to send test request: %v", err)
 			}
+			defer resp.Body.Close()
 
 			if tt.expectError {
 				if resp.StatusCode == 200 {
@@ -523,10 +524,8 @@ func TestValidateArrayOfStructs(t *testing.T) {
 						t.Errorf("Expected error field '%s', got '%s'", tt.errorField, validationErr.Errors[0].Field)
 					}
 				}
-			} else {
-				if resp.StatusCode != 200 {
-					t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
-				}
+			} else if resp.StatusCode != 200 {
+				t.Errorf("Expected 200 OK but got %d", resp.StatusCode)
 			}
 		})
 	}

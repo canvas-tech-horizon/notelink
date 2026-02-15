@@ -168,7 +168,7 @@ func generateJSONFromType(t reflect.Type) interface{} {
 			}
 
 			// Get field name from JSON tag or use field name
-			fieldName := getJSONFieldName(field)
+			fieldName := getJSONFieldName(&field)
 			if fieldName == "-" {
 				continue // Skip fields marked with json:"-"
 			}
@@ -185,7 +185,7 @@ func generateJSONFromType(t reflect.Type) interface{} {
 }
 
 // getJSONFieldName extracts the JSON field name from struct field tags
-func getJSONFieldName(field reflect.StructField) string {
+func getJSONFieldName(field *reflect.StructField) string {
 	jsonTag := field.Tag.Get("json")
 	if jsonTag == "" {
 		// Convert to camelCase if no JSON tag
@@ -301,7 +301,11 @@ func generateIntExample(fieldName string) int {
 
 // generateUintExample creates contextual unsigned integer examples
 func generateUintExample(fieldName string) uint {
-	return uint(generateIntExample(fieldName))
+	intVal := generateIntExample(fieldName)
+	if intVal < 0 {
+		return 0
+	}
+	return uint(intVal)
 }
 
 // generateFloatExample creates contextual float examples

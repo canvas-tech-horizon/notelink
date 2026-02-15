@@ -16,12 +16,12 @@ type SimpleUser struct {
 }
 
 type UserWithTypes struct {
-	ID        uint    `json:"id"`
-	Name      string  `json:"name"`
-	Age       int     `json:"age"`
 	Height    float64 `json:"height"`
-	IsActive  bool    `json:"is_active"`
+	Name      string  `json:"name"`
 	CreatedAt string  `json:"created_at"`
+	ID        uint    `json:"id"`
+	Age       int     `json:"age"`
+	IsActive  bool    `json:"is_active"`
 }
 
 type UserWithNested struct {
@@ -43,9 +43,9 @@ type UserWithPointers struct {
 }
 
 type UserWithTimeFields struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
+	Name      string    `json:"name"`
+	ID        int       `json:"id"`
 }
 
 // TestGenerateTypeScriptSchema tests TypeScript schema generation
@@ -416,7 +416,7 @@ func TestGetJSONFieldName(t *testing.T) {
 				Tag:  reflect.StructTag(tt.jsonTag),
 			}
 
-			result := getJSONFieldName(mockField)
+			result := getJSONFieldName(&mockField)
 			if result != tt.expected {
 				t.Errorf("Expected '%s', got '%s'", tt.expected, result)
 			}

@@ -922,26 +922,23 @@ func (an *ApiNote) generateHTML() string {
 				// Add endpoint at the deepest segment
 				current.Endpoints = append(current.Endpoints, endpoint)
 			}
-		} else {
-			// Non-versioned endpoint, group by first segment
-			if len(segments) > 0 {
-				topSeg := segments[0]
-				if nonVersionedRoot.Children[topSeg] == nil {
-					nonVersionedRoot.Children[topSeg] = &SegmentNode{Name: topSeg, Children: make(map[string]*SegmentNode)}
-				}
-				current := nonVersionedRoot.Children[topSeg]
-
-				// Process all remaining segments to build the full hierarchy
-				for i := 1; i < len(segments); i++ {
-					seg := segments[i]
-					if current.Children[seg] == nil {
-						current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
-					}
-					current = current.Children[seg]
-				}
-				// Add endpoint at the deepest segment
-				current.Endpoints = append(current.Endpoints, endpoint)
+		} else if len(segments) > 0 {
+			topSeg := segments[0]
+			if nonVersionedRoot.Children[topSeg] == nil {
+				nonVersionedRoot.Children[topSeg] = &SegmentNode{Name: topSeg, Children: make(map[string]*SegmentNode)}
 			}
+			current := nonVersionedRoot.Children[topSeg]
+
+			// Process all remaining segments to build the full hierarchy
+			for i := 1; i < len(segments); i++ {
+				seg := segments[i]
+				if current.Children[seg] == nil {
+					current.Children[seg] = &SegmentNode{Name: seg, Children: make(map[string]*SegmentNode)}
+				}
+				current = current.Children[seg]
+			}
+			// Add endpoint at the deepest segment
+			current.Endpoints = append(current.Endpoints, endpoint)
 		}
 	}
 
@@ -1058,14 +1055,12 @@ func (an *ApiNote) generateHTML() string {
                         <form id="test-form-` + endpoint.Method + "-" + strings.ReplaceAll(strings.ReplaceAll(endpoint.Path, "/", "-"), ":", "_") + `" onsubmit="testApi(event, '` + endpoint.Method + `', '` + endpoint.Path + `', this)" enctype="multipart/form-data">
                             <input type="hidden" name="method" value="` + endpoint.Method + `">`)
 
-						// hasFormData := false
 						for _, param := range endpoint.Parameters {
 							inputType := "text"
 							if param.Type == "number" {
 								inputType = "number"
 							} else if param.Type == "file" {
 								inputType = "file"
-								// hasFormData = true
 							}
 							requiredAttr := ""
 							if param.Required {
@@ -1137,7 +1132,7 @@ func (an *ApiNote) generateHTML() string {
 	}
 
 	// Render versioned groups
-	var versions []string
+	versions := make([]string, 0, len(versionGroups))
 	for version := range versionGroups {
 		versions = append(versions, version)
 	}

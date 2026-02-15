@@ -38,13 +38,13 @@ import (
 // It integrates with a Fiber application to serve both the API endpoints
 // and their documentation.
 type ApiNote struct {
-	config               *Config             // Configuration for the API documentation
-	endpoints            map[string]Endpoint // Registered endpoints with their details
-	app                  *fiber.App          // Underlying Fiber application
 	middlewares          []fiber.Handler     // Middleware stack applied to routes
 	jwtMiddlewares       []fiber.Handler     // JWT middleware stack (tracked separately for AuthRequired)
 	customAuthMiddleware []fiber.Handler     // Custom authentication middleware stack
 	jwtSecret            string              // Secret key for JWT signing and verification
+	config               *Config             // Configuration for the API documentation
+	endpoints            map[string]Endpoint // Registered endpoints with their details
+	app                  *fiber.App          // Underlying Fiber application
 }
 
 // NewApiNote creates a new ApiNote instance with the provided configuration and JWT secret.
@@ -82,7 +82,10 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 	app.Get("/api-docs/metrics", monitor.New(monitor.Config{Title: "Service Metrics Page"}))
 
 	app.Get("/api-docs/indent", func(c fiber.Ctx) error {
-		data, _ := json.MarshalIndent(app.GetRoutes(true), "", "  ")
+		data, err := json.MarshalIndent(app.GetRoutes(true), "", "  ")
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).SendString("Error marshaling routes")
+		}
 		return c.Status(http.StatusOK).SendString(string(data))
 	})
 
@@ -105,7 +108,6 @@ func NewApiNote(config *Config, jwtSecret string) *ApiNote {
 		for _, iconPath := range iconPaths {
 			if _, err := os.Stat(iconPath); err == nil {
 				c.Set("Content-Type", "image/png")
-				// c.Set("Cache-Control", "public, max-age=31536000") // Cache for 1 year
 				return c.SendFile(iconPath)
 			}
 		}
@@ -201,7 +203,7 @@ func (an *ApiNote) UseCustomAuth(middleware ...fiber.Handler) {
 //	    SchemasRequest:  CreateUserRequest{},
 //	    SchemasResponse: UserResponse{},
 //	})
-func (an *ApiNote) DocumentedRoute(input DocumentedRouteInput) error {
+func (an *ApiNote) DocumentedRoute(input *DocumentedRouteInput) error {
 	// Validate required fields
 	if input.Method == "" || input.Path == "" {
 		return fmt.Errorf("method and path are required")

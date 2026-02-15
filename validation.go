@@ -130,7 +130,7 @@ func getParameterValue(c fiber.Ctx, param Parameter) (string, bool) {
 }
 
 // validateParameterType validates and converts parameter value to the expected type
-func validateParameterType(value string, paramType string) (interface{}, error) {
+func validateParameterType(value, paramType string) (interface{}, error) {
 	switch strings.ToLower(paramType) {
 	case "string":
 		return value, nil
@@ -164,7 +164,7 @@ func validateStruct(data map[string]interface{}, schemaType reflect.Type) []Vali
 		}
 
 		// Get JSON field name
-		jsonName := getJSONFieldName(field)
+		jsonName := getJSONFieldName(&field)
 		if jsonName == "-" {
 			continue
 		}

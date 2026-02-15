@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
 )
 
 // OpenAPI 3.1 root structure
@@ -53,22 +54,22 @@ type Operation struct {
 }
 
 type ParameterSpec struct {
+	Schema      *JSONSchema `json:"schema"`
 	Name        string      `json:"name"`
 	In          string      `json:"in"` // "query", "path", "header", "cookie"
 	Description string      `json:"description,omitempty"`
 	Required    bool        `json:"required,omitempty"`
-	Schema      *JSONSchema `json:"schema"`
 }
 
 type RequestBody struct {
+	Content     map[string]MediaType `json:"content"`
 	Description string               `json:"description,omitempty"`
 	Required    bool                 `json:"required,omitempty"`
-	Content     map[string]MediaType `json:"content"`
 }
 
 type Response struct {
-	Description string               `json:"description"`
 	Content     map[string]MediaType `json:"content,omitempty"`
+	Description string               `json:"description"`
 }
 
 type MediaType struct {
@@ -92,17 +93,17 @@ type SecurityScheme struct {
 
 // JSONSchema represents JSON Schema (compatible with OpenAPI 3.1)
 type JSONSchema struct {
+	Properties           map[string]*JSONSchema `json:"properties,omitempty"`
+	Required             []string               `json:"required,omitempty"`
+	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"`
+	Items                *JSONSchema            `json:"items,omitempty"`
+	Minimum              *float64               `json:"minimum,omitempty"`
 	Type                 string                 `json:"type,omitempty"`
 	Format               string                 `json:"format,omitempty"`
 	Title                string                 `json:"title,omitempty"`
 	Description          string                 `json:"description,omitempty"`
-	Properties           map[string]*JSONSchema `json:"properties,omitempty"`
-	Required             []string               `json:"required,omitempty"`
-	Items                *JSONSchema            `json:"items,omitempty"`
-	Nullable             bool                   `json:"nullable,omitempty"`
-	Minimum              *float64               `json:"minimum,omitempty"`
 	Ref                  string                 `json:"$ref,omitempty"`
-	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"`
+	Nullable             bool                   `json:"nullable,omitempty"`
 }
 
 // GenerateOpenAPISpec creates an OpenAPI 3.1 specification from registered endpoints
@@ -153,7 +154,7 @@ func (an *ApiNote) GenerateOpenAPISpec() *OpenAPISpec {
 			pathItem = PathItem{}
 		}
 
-		operation := an.endpointToOperation(endpoint, spec.Components.Schemas)
+		operation := an.endpointToOperation(&endpoint, spec.Components.Schemas)
 
 		// Assign operation to the correct HTTP method
 		switch strings.ToUpper(endpoint.Method) {
@@ -182,7 +183,7 @@ func (an *ApiNote) GenerateOpenAPISpec() *OpenAPISpec {
 }
 
 // endpointToOperation converts an Endpoint to an OpenAPI Operation
-func (an *ApiNote) endpointToOperation(endpoint Endpoint, componentSchemas map[string]*JSONSchema) *Operation {
+func (an *ApiNote) endpointToOperation(endpoint *Endpoint, componentSchemas map[string]*JSONSchema) *Operation {
 	// Generate operation ID from method and path
 	operationID := generateOperationID(endpoint.Method, endpoint.Path)
 
@@ -232,18 +233,20 @@ func (an *ApiNote) endpointToOperation(endpoint Endpoint, componentSchemas map[s
 		}
 
 		// Generate example from schema
-		exampleJSON, _ := generateJSONTemplate(endpoint.RequestSchema)
-		var exampleData interface{}
-		json.Unmarshal([]byte(exampleJSON), &exampleData)
-
-		operation.RequestBody = &RequestBody{
-			Required: true,
-			Content: map[string]MediaType{
-				"application/json": {
-					Schema:  schema,
-					Example: exampleData,
-				},
-			},
+		exampleJSON, err := generateJSONTemplate(endpoint.RequestSchema)
+		if err == nil {
+			var exampleData interface{}
+			if err := json.Unmarshal([]byte(exampleJSON), &exampleData); err == nil {
+				operation.RequestBody = &RequestBody{
+					Required: true,
+					Content: map[string]MediaType{
+						"application/json": {
+							Schema:  schema,
+							Example: exampleData,
+						},
+					},
+				}
+			}
 		}
 	}
 
@@ -266,15 +269,17 @@ func (an *ApiNote) endpointToOperation(endpoint Endpoint, componentSchemas map[s
 				}
 
 				// Generate example from schema
-				exampleJSON, _ := generateJSONTemplate(endpoint.ResponseSchema)
-				var exampleData interface{}
-				json.Unmarshal([]byte(exampleJSON), &exampleData)
-
-				response.Content = map[string]MediaType{
-					"application/json": {
-						Schema:  schema,
-						Example: exampleData,
-					},
+				exampleJSON, err := generateJSONTemplate(endpoint.ResponseSchema)
+				if err == nil {
+					var exampleData interface{}
+					if err := json.Unmarshal([]byte(exampleJSON), &exampleData); err == nil {
+						response.Content = map[string]MediaType{
+							"application/json": {
+								Schema:  schema,
+								Example: exampleData,
+							},
+						}
+					}
 				}
 			}
 		}
@@ -404,7 +409,7 @@ func structToJSONSchema(typ reflect.Type, name string, componentSchemas map[stri
 			continue
 		}
 
-		fieldName := getJSONFieldName(field)
+		fieldName := getJSONFieldName(&field)
 		if fieldName == "-" {
 			continue
 		}
@@ -481,11 +486,11 @@ func goTypeToJSONSchema(t reflect.Type) *JSONSchema {
 	case reflect.Int64:
 		return &JSONSchema{Type: "integer", Format: "int64"}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32:
-		min := 0.0
-		return &JSONSchema{Type: "integer", Format: "int32", Minimum: &min}
+		minVal := 0.0
+		return &JSONSchema{Type: "integer", Format: "int32", Minimum: &minVal}
 	case reflect.Uint64:
-		min := 0.0
-		return &JSONSchema{Type: "integer", Format: "int64", Minimum: &min}
+		minVal := 0.0
+		return &JSONSchema{Type: "integer", Format: "int64", Minimum: &minVal}
 	case reflect.Float32:
 		return &JSONSchema{Type: "number", Format: "float"}
 	case reflect.Float64:
@@ -521,7 +526,7 @@ func generateOperationID(method, path string) string {
 	segments := strings.Split(cleanPath, "/")
 
 	// Build operation ID
-	var parts []string
+	parts := make([]string, 0, len(segments)+1)
 	parts = append(parts, strings.ToLower(method))
 
 	for _, segment := range segments {
@@ -531,18 +536,29 @@ func generateOperationID(method, path string) string {
 		}
 
 		// Handle path parameters like :id or {id}
-		if strings.HasPrefix(segment, ":") {
-			segment = "By" + strings.Title(segment[1:])
-		} else if strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}") {
-			segment = "By" + strings.Title(segment[1:len(segment)-1])
-		} else {
-			segment = strings.Title(segment)
+		switch {
+		case strings.HasPrefix(segment, ":"):
+			segment = "By" + toTitle(segment[1:])
+		case strings.HasPrefix(segment, "{") && strings.HasSuffix(segment, "}"):
+			segment = "By" + toTitle(segment[1:len(segment)-1])
+		default:
+			segment = toTitle(segment)
 		}
 
 		parts = append(parts, segment)
 	}
 
 	return strings.Join(parts, "")
+}
+
+// toTitle converts the first character of a string to uppercase
+func toTitle(s string) string {
+	if s == "" {
+		return s
+	}
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+	return string(r)
 }
 
 // extractTagsFromPath extracts resource tags from the path
@@ -572,7 +588,7 @@ func (an *ApiNote) ExportOpenAPIToFile(filepath string) error {
 		return fmt.Errorf("failed to marshal OpenAPI spec: %w", err)
 	}
 
-	err = os.WriteFile(filepath, data, 0644)
+	err = os.WriteFile(filepath, data, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}

@@ -2,6 +2,7 @@ package notelink
 
 import (
 	"bytes"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -10,26 +11,26 @@ import (
 
 // Benchmark structures
 type BenchUser struct {
-	ID       int     `json:"id"`
+	Salary   float64 `json:"salary"`
 	Name     string  `json:"name"`
 	Email    string  `json:"email"`
+	ID       int     `json:"id"`
 	Age      int     `json:"age"`
 	IsActive bool    `json:"is_active"`
-	Salary   float64 `json:"salary"`
 }
 
 type BenchOrder struct {
-	ID       int         `json:"id"`
-	UserID   int         `json:"user_id"`
-	Total    float64     `json:"total"`
 	Items    []BenchItem `json:"items"`
 	Customer BenchUser   `json:"customer"`
+	Total    float64     `json:"total"`
+	ID       int         `json:"id"`
+	UserID   int         `json:"user_id"`
 }
 
 type BenchItem struct {
-	ID       int     `json:"id"`
-	Name     string  `json:"name"`
 	Price    float64 `json:"price"`
+	Name     string  `json:"name"`
+	ID       int     `json:"id"`
 	Quantity int     `json:"quantity"`
 }
 
@@ -49,7 +50,7 @@ func BenchmarkValidateParametersSmall(b *testing.B) {
 		return c.SendString("OK")
 	})
 
-	req := httptest.NewRequest("GET", "/test?id=123&name=test", nil)
+	req := httptest.NewRequest("GET", "/test?id=123&name=test", http.NoBody)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -83,7 +84,7 @@ func BenchmarkValidateParametersLarge(b *testing.B) {
 		return c.SendString("OK")
 	})
 
-	req := httptest.NewRequest("GET", "/test?id=123&name=john&email=john@example.com&age=25&active=true&score=95.5", nil)
+	req := httptest.NewRequest("GET", "/test?id=123&name=john&email=john@example.com&age=25&active=true&score=95.5", http.NoBody)
 	req.Header.Set("token", "abc123")
 	req.Header.Set("api-key", "key456")
 

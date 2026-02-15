@@ -38,13 +38,13 @@ type Endpoint struct {
 
 // DocumentedRouteInput represents the input for registering a documented route
 type DocumentedRouteInput struct {
-	Method          string            `json:"method"`
-	Path            string            `json:"path"`
-	Description     string            `json:"description"`
-	Responses       map[string]string `json:"responses"`
-	Handler         fiber.Handler     `json:"handler"`
 	Params          []Parameter       `json:"params"`
 	SchemasRequest  interface{}       `json:"schemasRequest"`
 	SchemasResponse interface{}       `json:"schemasResponse"`
+	Responses       map[string]string `json:"responses"`
+	Method          string            `json:"method"`
+	Path            string            `json:"path"`
+	Description     string            `json:"description"`
+	Handler         fiber.Handler     `json:"handler"`
 	AuthRequired    *bool             `json:"authRequired"` // Optional: explicitly set if auth is required. If nil, auto-detected based on JWT middleware usage
 }
